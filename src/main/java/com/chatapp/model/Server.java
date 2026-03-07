@@ -20,6 +20,10 @@ public class Server {
 
     private Client currClient ;
 
+    public Server (String name) {
+        this.name = name ;
+    }
+
     public double getAverageRating() {
         if (ratingCount == 0) {
             return 0;

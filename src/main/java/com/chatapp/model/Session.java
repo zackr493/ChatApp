@@ -21,6 +21,9 @@ public class Session {
         this.endTime = LocalDateTime.now() ;
         this.rating = rating ;
 
+
+        // synchronized ensures only one thread at a time can enter a synchronized method on the same object
+        // otheres will be blocked until lock released
         synchronized (server) {
             server.setNumClientsDay(server.getNumClientsDay() + 1 );
             server.setNumClientsMonth(server.getNumClientsMonth() + 1); ;
