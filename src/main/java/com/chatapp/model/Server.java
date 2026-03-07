@@ -3,7 +3,6 @@ package com.chatapp.model;
 import lombok.Data;
 
 
-import java.time.LocalDateTime;
 
 @Data
 public class Server {

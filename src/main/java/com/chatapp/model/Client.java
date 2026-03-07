@@ -10,7 +10,7 @@ public class Client {
 
     private LocalDateTime arrivedAt;
 
-    private Server currentServer ;
+    private Server currServer ;
 
     public Client (String name) {
         this.name = name ;
