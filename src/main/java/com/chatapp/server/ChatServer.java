@@ -33,8 +33,12 @@ public class ChatServer {
             executor.submit(() -> manager.handleClientJoining(client));
         }
 
+
+
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.HOURS);
+
+        manager.printServerStats();
 
 
 

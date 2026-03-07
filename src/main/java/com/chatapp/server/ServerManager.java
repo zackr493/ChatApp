@@ -124,6 +124,39 @@ public class ServerManager {
         }
     }
 
+    public void printServerStats() {
+        int totalServedToday = 0;
+        int totalServedMonth = 0;
+        double totalRating = 0;
+        int totalRatingCount = 0;
+
+        System.out.println("==== SERVER STATISTICS ====");
+
+        for (Server server : servers) {
+            int servedToday = server.getNumClientsDay();
+            int servedMonth = server.getNumClientsMonth();
+            double avgRating = server.getAverageRating();
+
+            totalServedToday += servedToday;
+            totalServedMonth += servedMonth;
+
+            totalRating += server.getRatingTotal();
+            totalRatingCount += server.getRatingCount();
+
+            System.out.println("Server: " + server.getName());
+            System.out.println(" Clients served today: " + servedToday);
+            System.out.println(" Clients served this month: " + servedMonth);
+            System.out.println(" Average Rating: " + avgRating);
+        }
+
+        double overallAvgRating = totalRatingCount > 0 ? totalRating / totalRatingCount : 0 ;
+
+        System.out.println("==== GLOBAL STATS ====");
+        System.out.println("Total Clients Simulated: " + totalClients);
+        System.out.println("Total Clients Lost: " + lostClients);
+        System.out.println("Overall average rating: " + overallAvgRating);
+    }
+
 
 
 
