@@ -8,8 +8,15 @@ import java.time.LocalDateTime;
 public class Client {
     private String name;
 
-    private LocalDateTime created_at;
+    private LocalDateTime arrivedAt;
 
-    private String curr_client;
+    private Server currentServer ;
+
+    public Client (String name) {
+        this.name = name ;
+        this.arrivedAt = LocalDateTime.now() ;
+
+
+    }
 
 }

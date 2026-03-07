@@ -10,20 +10,22 @@ public class Server {
 
     private String name;
 
-    private LocalDateTime created_at;
+    private int numClientsDay = 0;
 
-    private LocalDateTime expired_at;
+    private int numClientsMonth = 0;
 
-    private int num_clients_day ;
+    private int ratingTotal = 0;
 
-    private int num_clients_month;
+    private int ratingCount = 0;
 
-    private int average_rating;
+    private Client currClient ;
 
-    private int num_clients_approached ;
+    public double getAverageRating() {
+        if (ratingCount == 0) {
+            return 0;
+        }
 
-    private int num_clients_lost;
-
-    private String curr_client ;
+        return ratingTotal / ratingCount ;
+    }
 
 }
