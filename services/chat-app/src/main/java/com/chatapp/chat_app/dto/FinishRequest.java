@@ -1,7 +1,9 @@
 package com.chatapp.chat_app.dto;
 
+import lombok.Data;
+
+@Data
 public class FinishRequest {
-    private String clientName;
-    private String serverName;
+    private String sessionId;
     private int rating;
 }

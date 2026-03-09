@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class JoinRequest {
-    private String clientName;
-    private int timeoutMs = 5000; // default
+    private String clientId;
+    private Integer timeoutMs = 300000; // default
 }

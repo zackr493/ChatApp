@@ -7,7 +7,7 @@ import lombok.Data;
 @Data
 public class Server {
 
-    private String name;
+    private String id;
 
     private int numClientsDay = 0;
 
@@ -19,8 +19,8 @@ public class Server {
 
     private Client currClient ;
 
-    public Server (String name) {
-        this.name = name ;
+    public Server (String id) {
+        this.id = id ;
     }
 
     public double getAverageRating() {

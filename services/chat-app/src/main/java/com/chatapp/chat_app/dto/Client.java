@@ -8,13 +8,13 @@ import java.time.LocalDateTime;
 
 @Data
 public class Client {
-    private String name;
+    private String id;
     private LocalDateTime arrivedAt;
     private ClientStatus status;
 
 
     public Client (String name) {
-        this.name = name ;
+        this.id = name ;
         this.arrivedAt = LocalDateTime.now() ;
         this.status = ClientStatus.CREATED;
 

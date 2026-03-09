@@ -1,11 +1,11 @@
 package com.chatapp.chat_app.controller;
 
-import com.chatapp.chat_app.dto.Client;
-import com.chatapp.chat_app.dto.FinishRequest;
-import com.chatapp.chat_app.dto.JoinRequest;
+import com.chatapp.chat_app.dto.*;
 import com.chatapp.chat_app.service.ServerManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 
 // inject final fields
@@ -18,34 +18,62 @@ public class ServerController {
 
 
     @PostMapping("/join")
-    public String joinServer(@RequestBody JoinRequest request) {
-        Client client = new Client(request.getClientName());
-        new Thread(() -> serverManager.handleClientJoining(client, 300000)).start();
-        return "Client " + client.getName() + " is trying to join a server.";
+    public ApiResponse<String> joinServer(@RequestBody JoinRequest request) {
+
+
+        if (request.getClientId() == null || request.getClientId().isBlank()) {
+            return new ApiResponse<>(400, "Client name cannot be empty", null);
+        }
+
+
+        Client client = serverManager.getClient(request.getClientId());
+        if (client == null) {
+            return new ApiResponse<>(404, "Client not found. Please create the client first.", null);
+        }
+
+        int timeout = (request.getTimeoutMs() != null) ? request.getTimeoutMs() : 300000;
+
+
+        new Thread(() -> serverManager.handleClientJoining(client,  timeout)).start();
+
+        return new ApiResponse<>(200,
+                "Client " + client.getId() + " is trying to join a server",
+                client.getId());
+
+
+
+
     }
+
 
     @PostMapping("/finish")
-    public String finishSession(
-            @RequestBody FinishRequest request) {
+    public String finishSession(@RequestBody FinishRequest request) {
+        String sessionId = request.getSessionId();
+        int rating = request.getRating();
 
-//        Client client = serverManager.getClientByName(clientName);
-//        Server server = serverManager.getServerByName(serverName);
-//
-//        if (client == null || server == null || client.getCurrServer() != server) {
-//            return "Invalid client or server, or client not connected to this server.";
-//        }
-//
-//        serverManager.finishSession(client, server, rating);
-//        return "Session finished for client " + clientName + " on server " + serverName;
-        return null ;
+        try {
+            serverManager.finishSession(sessionId, rating); // your ServerManager handles server updates safely
+            return "Session finished successfully: " + sessionId;
+        } catch (Exception e) {
+            return "Failed to finish session: " + e.getMessage();
+        }
     }
 
-    /**
-     * Get current server statistics
-     */
-    @GetMapping("/stats")
-    public String getServerStats() {
-        serverManager.printServerStats();
-        return "Server stats printed in console.";
+    // GET all servers
+    @GetMapping
+    public List<Server> getAllServers() {
+        return serverManager.getServers();
     }
+
+    // GET server by name
+    @GetMapping("/{serverName}")
+    public Server getServerByName(@PathVariable String serverName) {
+        Server server = serverManager.getServerByName(serverName);
+        if (server == null) {
+            throw new RuntimeException("Server not found: " + serverName);
+        }
+        return server;
+    }
+
+
 }

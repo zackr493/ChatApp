@@ -51,7 +51,9 @@ public class ServerManager {
     // CRUD for clients, in this case we do not need DELETE or UPDATE, we only need to update status
     public boolean addClient(Client client) {
 
-        Client existing = clientMap.putIfAbsent(client.getName(), client);
+        System.out.println(clientMap);
+        System.out.println(client);
+        Client existing = clientMap.putIfAbsent(client.getId(), client);
 
         if (existing == null) {
             client.setStatus(ClientStatus.CREATED);
@@ -76,8 +78,8 @@ public class ServerManager {
         return new ArrayList<>(clientMap.values());
     }
 
-    public boolean updateStatus(Client client, ClientStatus status) {
-        Client existing = clientMap.get(client.getName());
+    public boolean updateClientStatus(Client client, ClientStatus status) {
+        Client existing = clientMap.get(client.getId());
 
         if (existing == null) {
             return false; // client does not exist
@@ -99,7 +101,7 @@ public class ServerManager {
             // if server not acquired within 5minutes, we add to lost clients
             if (!serverAcquired) {
                 lostClients.incrementAndGet();
-                System.out.println("LOST CLIENT: " + client.getName());
+                System.out.println("LOST CLIENT: " + client.getId());
                 return;
 
 
@@ -125,7 +127,7 @@ public class ServerManager {
                 session.setServer(server);
             }
 
-            System.out.println(client.getName() + " is connected to " + server.getName());
+            System.out.println(client.getId() + " is connected to " + server.getId());
 
 
 
@@ -133,6 +135,25 @@ public class ServerManager {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    // Return all servers
+    public List<Server> getServers() {
+        synchronized (servers) { // synchronized since servers list is wrapped in synchronizedList
+            return new ArrayList<>(servers);
+        }
+    }
+
+    // Get server by name
+    public Server getServerByName(String name) {
+        synchronized (servers) {
+            for (Server server : servers) {
+                if (server.getId().equals(name)) {
+                    return server;
+                }
+            }
+        }
+        return null;
     }
 
     public Server getAvailServer() {
@@ -160,6 +181,9 @@ public class ServerManager {
         Server server = session.getServer();
         Client client = session.getClient();
 
+
+        // synchronized ensures only one thread at a time can enter a synchronized method on the same object
+        // otheres will be blocked until lock released
         if (server != null) {
             synchronized (server) {
                 server.setNumClientsDay(server.getNumClientsDay() + 1);
@@ -167,7 +191,7 @@ public class ServerManager {
                 server.setRatingTotal(server.getRatingTotal() + rating);
                 server.setRatingCount(server.getRatingCount() + 1);
 
-                System.out.println("CHAT ENDED | CLIENT: " + client.getName() + " SERVER: " + server.getName());
+                System.out.println("CHAT ENDED | CLIENT: " + client.getId() + " SERVER: " + server.getId());
 
                 server.setCurrClient(null);
 
@@ -206,7 +230,7 @@ public class ServerManager {
             totalRating += server.getRatingTotal();
             totalRatingCount += server.getRatingCount();
 
-            System.out.println("Server: " + server.getName());
+            System.out.println("Server: " + server.getId());
             System.out.println(" Clients served today: " + servedToday);
             System.out.println(" Clients served this month: " + servedMonth);
             System.out.println(" Average Rating: " + avgRating);
@@ -219,6 +243,8 @@ public class ServerManager {
         System.out.println("Total Clients Lost: " + lostClients);
         System.out.println("Overall average rating: " + overallAvgRating);
     }
+
+
 
 
 
