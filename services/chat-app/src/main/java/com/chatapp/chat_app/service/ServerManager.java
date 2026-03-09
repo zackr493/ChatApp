@@ -1,6 +1,7 @@
 package com.chatapp.chat_app.service;
 
 import com.chatapp.chat_app.dto.Client;
+import com.chatapp.chat_app.dto.ClientStatus;
 import com.chatapp.chat_app.dto.Server;
 
 import java.util.ArrayList;
@@ -32,8 +33,8 @@ public class ServerManager {
     private final AtomicInteger totalClients = new AtomicInteger() ;
     private final AtomicInteger lostClients = new AtomicInteger() ;
 
-    private final Map<String, Client> activeClients = new ConcurrentHashMap<>();
-    private final Map<String, String> clientStatus = new ConcurrentHashMap<>();
+
+    private final Map<String, Client> clientMap = new ConcurrentHashMap<>();
 
 
     public ServerManager(int maxServers) {
@@ -49,29 +50,36 @@ public class ServerManager {
 
     }
 
-    // CRUD for clients, in this case we do not need DELETE or UPDATE
-    public void addClient(Client client) {
+    // CRUD for clients, in this case we do not need DELETE or UPDATE, we only need to update status
+    public boolean addClient(Client client) {
 
-        // thread safe adding
-        Client existing = activeClients.putIfAbsent(client.getName(), client);
+        Client existing = clientMap.putIfAbsent(client.getName(), client);
+
         if (existing == null) {
-            clientStatus.put(client.getName(), "created");
-            System.out.println("Client added");
-        } else {
-            System.out.println("Client already exists");
+            client.setStatus(ClientStatus.CREATED);
+            return true;
         }
-
+        return false;
     }
 
     public Client getClient(String name) {
-        return activeClients.get(name);
+        return clientMap.get(name);
     }
 
 
-
-
     public List<Client> getAllClients() {
-        return new ArrayList<>(activeClients.values());
+        return new ArrayList<>(clientMap.values());
+    }
+
+    public boolean updateStatus(Client client, ClientStatus status) {
+        Client existing = clientMap.get(client.getName());
+
+        if (existing == null) {
+            return false; // client does not exist
+        }
+
+        existing.setStatus(status);
+        return true;
     }
 
     public void handleClientJoining(Client client, int timeToExpiry) {
@@ -104,7 +112,6 @@ public class ServerManager {
                 server.setCurrClient(client);
             }
 
-            client.setCurrServer(server);
 
             System.out.println(client.getName() + " is connected to " + server.getName());
 
@@ -130,7 +137,7 @@ public class ServerManager {
 
     public void finishSession(Client client, Server server, int rating) {
 
-        if (client.getCurrServer() != server) {
+        if (server.getCurrClient() != client) {
             System.out.println("Client not connected to this server.");
             return; // prevents double release
         }
@@ -144,7 +151,6 @@ public class ServerManager {
             System.out.println("CHAT ENDED | CLIENT: " + client.getName() + " SERVER: " + server.getName());
 
             server.setCurrClient(null);
-            client.setCurrServer(null);
 
             semaphore.release();
         }

@@ -20,7 +20,7 @@ public class ServerController {
     @PostMapping("/join")
     public String joinServer(@RequestBody JoinRequest request) {
         Client client = new Client(request.getClientName());
-        new Thread(() -> serverManager.handleClientJoining(client, timeoutMs)).start();
+        new Thread(() -> serverManager.handleClientJoining(client, 300000)).start();
         return "Client " + client.getName() + " is trying to join a server.";
     }
 
@@ -28,15 +28,16 @@ public class ServerController {
     public String finishSession(
             @RequestBody FinishRequest request) {
 
-        Client client = serverManager.getClientByName(clientName);
-        Server server = serverManager.getServerByName(serverName);
-
-        if (client == null || server == null || client.getCurrServer() != server) {
-            return "Invalid client or server, or client not connected to this server.";
-        }
-
-        serverManager.finishSession(client, server, rating);
-        return "Session finished for client " + clientName + " on server " + serverName;
+//        Client client = serverManager.getClientByName(clientName);
+//        Server server = serverManager.getServerByName(serverName);
+//
+//        if (client == null || server == null || client.getCurrServer() != server) {
+//            return "Invalid client or server, or client not connected to this server.";
+//        }
+//
+//        serverManager.finishSession(client, server, rating);
+//        return "Session finished for client " + clientName + " on server " + serverName;
+        return null ;
     }
 
     /**

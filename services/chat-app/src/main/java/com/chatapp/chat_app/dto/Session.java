@@ -35,7 +35,6 @@ public class Session {
 
         }
 
-        client.setCurrServer(null);
 
 
     }
