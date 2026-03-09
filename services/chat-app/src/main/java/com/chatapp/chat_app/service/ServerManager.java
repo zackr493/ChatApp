@@ -3,13 +3,12 @@ package com.chatapp.chat_app.service;
 import com.chatapp.chat_app.dto.Client;
 import com.chatapp.chat_app.dto.ClientStatus;
 import com.chatapp.chat_app.dto.Server;
+import com.chatapp.chat_app.dto.Session;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
-import java.util.Collections;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -33,9 +32,8 @@ public class ServerManager {
     private final AtomicInteger totalClients = new AtomicInteger() ;
     private final AtomicInteger lostClients = new AtomicInteger() ;
 
-
     private final Map<String, Client> clientMap = new ConcurrentHashMap<>();
-
+    private final Map<String, Session> sessionMap = new ConcurrentHashMap<>();
 
     public ServerManager(int maxServers) {
 
@@ -57,6 +55,13 @@ public class ServerManager {
 
         if (existing == null) {
             client.setStatus(ClientStatus.CREATED);
+
+            // uuid for session
+            String sessionId = UUID.randomUUID().toString();
+            Session session = new Session(client, null);
+
+            sessionMap.put(sessionId, session) ;
+
             return true;
         }
         return false;
@@ -112,6 +117,13 @@ public class ServerManager {
                 server.setCurrClient(client);
             }
 
+//          // attach server to existing session
+            // find session tied to client
+            Session session = sessionMap.values().stream().filter(s -> s.getClient() == client).findFirst().orElse(null);
+
+            if (session != null) {
+                session.setServer(server);
+            }
 
             System.out.println(client.getName() + " is connected to " + server.getName());
 
@@ -135,25 +147,44 @@ public class ServerManager {
         return null ;
     }
 
-    public void finishSession(Client client, Server server, int rating) {
+    public void finishSession(String sessionId, int rating) {
 
-        if (server.getCurrClient() != client) {
-            System.out.println("Client not connected to this server.");
-            return; // prevents double release
+        Session session = sessionMap.get(sessionId);
+
+        if (session == null) {
+            System.out.println("Session not found");
+            return;
         }
 
-        synchronized (server) {
-            server.setNumClientsDay(server.getNumClientsDay() + 1);
-            server.setNumClientsMonth(server.getNumClientsMonth() + 1);
-            server.setRatingTotal(server.getRatingTotal() + rating);
-            server.setRatingCount(server.getRatingCount() + 1);
 
-            System.out.println("CHAT ENDED | CLIENT: " + client.getName() + " SERVER: " + server.getName());
+        Server server = session.getServer();
+        Client client = session.getClient();
 
-            server.setCurrClient(null);
+        if (server != null) {
+            synchronized (server) {
+                server.setNumClientsDay(server.getNumClientsDay() + 1);
+                server.setNumClientsMonth(server.getNumClientsMonth() + 1);
+                server.setRatingTotal(server.getRatingTotal() + rating);
+                server.setRatingCount(server.getRatingCount() + 1);
 
-            semaphore.release();
+                System.out.println("CHAT ENDED | CLIENT: " + client.getName() + " SERVER: " + server.getName());
+
+                server.setCurrClient(null);
+
+                semaphore.release();
+            }
+
         }
+        else {
+            System.out.println("No server assigned for session of client");
+        }
+
+        session.setEndTime(LocalDateTime.now());
+        session.setRating(rating) ;
+        sessionMap.remove(sessionId);
+
+
+
     }
 
     public void printServerStats() {
