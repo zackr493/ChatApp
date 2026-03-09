@@ -5,6 +5,8 @@ import com.chatapp.chat_app.dto.Server;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.Collections;
 import java.util.concurrent.ThreadLocalRandom;
@@ -28,8 +30,11 @@ public class ServerManager {
 
     // normal int does 3 operations which is not thread safe
     private final AtomicInteger totalClients = new AtomicInteger() ;
-
     private final AtomicInteger lostClients = new AtomicInteger() ;
+
+    private final Map<String, Client> activeClients = new ConcurrentHashMap<>();
+    private final Map<String, String> clientStatus = new ConcurrentHashMap<>();
+
 
     public ServerManager(int maxServers) {
 
@@ -42,6 +47,31 @@ public class ServerManager {
 
         }
 
+    }
+
+    // CRUD for clients, in this case we do not need DELETE or UPDATE
+    public void addClient(Client client) {
+
+        // thread safe adding
+        Client existing = activeClients.putIfAbsent(client.getName(), client);
+        if (existing == null) {
+            clientStatus.put(client.getName(), "created");
+            System.out.println("Client added");
+        } else {
+            System.out.println("Client already exists");
+        }
+
+    }
+
+    public Client getClient(String name) {
+        return activeClients.get(name);
+    }
+
+
+
+
+    public List<Client> getAllClients() {
+        return new ArrayList<>(activeClients.values());
     }
 
     public void handleClientJoining(Client client, int timeToExpiry) {
@@ -78,16 +108,7 @@ public class ServerManager {
 
             System.out.println(client.getName() + " is connected to " + server.getName());
 
-            // in order to simulate ending of chat by 1000s clients,
-            // we need to finish it automatically in a random timing
 
-            // we use ThreadLocalRandom to prevent contention when many threads are generating random numbers
-            int chatDurationSeconds = ThreadLocalRandom.current().nextInt(1,6);
-            Thread.sleep(chatDurationSeconds * 1000) ;
-
-            // same with rating , we randomly choose
-            int rating = ThreadLocalRandom.current().nextInt(1,6) ;
-            finishSession(client, server, rating) ;
 
 
         } catch (InterruptedException e) {
@@ -109,6 +130,11 @@ public class ServerManager {
 
     public void finishSession(Client client, Server server, int rating) {
 
+        if (client.getCurrServer() != server) {
+            System.out.println("Client not connected to this server.");
+            return; // prevents double release
+        }
+
         synchronized (server) {
             server.setNumClientsDay(server.getNumClientsDay() + 1);
             server.setNumClientsMonth(server.getNumClientsMonth() + 1);
@@ -118,6 +144,7 @@ public class ServerManager {
             System.out.println("CHAT ENDED | CLIENT: " + client.getName() + " SERVER: " + server.getName());
 
             server.setCurrClient(null);
+            client.setCurrServer(null);
 
             semaphore.release();
         }
