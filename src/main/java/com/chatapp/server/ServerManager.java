@@ -44,16 +44,15 @@ public class ServerManager {
 
     }
 
-    public void handleClientJoining(Client client) {
+    public void handleClientJoining(Client client, int timeToExpiry) {
 
         // thread safe increment
         totalClients.incrementAndGet();
 
 
         try {
-            // try to acquire a server within 5 minutes
-            boolean serverAcquired = semaphore.tryAcquire(5, java.util.concurrent.TimeUnit.MINUTES);
-
+            // try to acquire a server within 5 minutes (in MS )
+            boolean serverAcquired = semaphore.tryAcquire(timeToExpiry, java.util.concurrent.TimeUnit.MILLISECONDS);
             // if server not acquired within 5minutes, we add to lost clients
             if (!serverAcquired) {
                 lostClients.incrementAndGet();

@@ -30,7 +30,7 @@ public class ChatServer {
         ExecutorService executor = Executors.newFixedThreadPool(50) ;
 
         for (Client client : clients) {
-            executor.submit(() -> manager.handleClientJoining(client));
+            executor.submit(() -> manager.handleClientJoining(client, 10000));
         }
 
 

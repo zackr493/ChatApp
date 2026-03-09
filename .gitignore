@@ -1,7 +1,7 @@
 target/
 !.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+!services/chatapp/src/main/**/target/
+!services/chatapp/src/test/**/target/
 .kotlin
 
 ### IntelliJ IDEA ###
@@ -29,8 +29,8 @@ target/
 /nbdist/
 /.nb-gradle/
 build/
-!**/src/main/**/build/
-!**/src/test/**/build/
+!services/chatapp/src/main/**/build/
+!services/chatapp/src/test/**/build/
 
 ### VS Code ###
 .vscode/
