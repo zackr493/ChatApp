@@ -55,6 +55,7 @@ public class ServerController {
         SessionEntity session = SessionEntity.builder()
                 .clientEntity(client)
                 .startTime(LocalDateTime.now())
+                .status(SessionStatus.CREATED)
                 .build();
 
         session = sessionRepository.save(session);
@@ -73,15 +74,23 @@ public class ServerController {
 
 
     @PostMapping("/finish")
-    public String finishSession(@RequestBody FinishRequest request) {
+    public ApiResponse<String> finishSession(@RequestBody FinishRequest request) {
         String sessionId = request.getSessionId();
         int rating = request.getRating();
 
         try {
             sessionService.finishSession(sessionId, rating); // your ServerManager handles server updates safely
-            return "Session finished successfully: " + sessionId;
+            return new ApiResponse<>(
+                    200,
+                    "Session " + sessionId + " ended" ,
+                    ""
+            );
         } catch (Exception e) {
-            return "Failed to finish session: " + e.getMessage();
+            return new ApiResponse<>(
+                    500,
+                    "Internal Server Error" ,
+                    null
+            );
         }
     }
 

@@ -1,5 +1,6 @@
 package com.chatapp.chat_app.service;
 
+import com.chatapp.chat_app.dto.SessionStatus;
 import com.chatapp.chat_app.model.ServerEntity;
 import com.chatapp.chat_app.model.SessionEntity;
 import com.chatapp.chat_app.repository.ServerRepository;
@@ -24,6 +25,8 @@ public class SessionService {
         SessionEntity session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Session not found"));
 
+
+
         ServerEntity server = session.getServerEntity();
         if (server != null) {
             serverRepository.incrementStats(server.getId(), rating);
@@ -32,6 +35,7 @@ public class SessionService {
         // Update session
         session.setEndTime(LocalDateTime.now());
         session.setRating(rating);
+        session.setStatus(SessionStatus.FINISHED);
         sessionRepository.save(session);
     }
 }
