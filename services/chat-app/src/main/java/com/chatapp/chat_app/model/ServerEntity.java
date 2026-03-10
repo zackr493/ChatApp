@@ -1,19 +1,32 @@
 package com.chatapp.chat_app.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
+import java.util.UUID;
 
 
 @Data
 @Entity
 @Table(name = "servers")
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ServerEntity {
 
     @Id
     private String id;
+
+    // this should already be generated , this is just fallback
+    @PrePersist
+    public void prePersist() {
+        if (id == null) {
+            id = java.util.UUID.randomUUID().toString();
+        }
+    }
 
     private int numClientsDay = 0;
 
@@ -23,11 +36,13 @@ public class ServerEntity {
 
     private int ratingCount = 0;
 
-    private String currClientEntity;
+    // nullable true
+    private String currClientId;
 
-    public ServerEntity(String id) {
-        this.id = id ;
-    }
+    // this key provides optimisticLocking, when transactions occur, others are blocked
+    // checks version before update, retries on conflict
+    @Version
+    private Long version;
 
     public double getAverageRating() {
         if (ratingCount == 0) {

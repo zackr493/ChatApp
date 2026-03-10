@@ -1,10 +1,11 @@
 package com.chatapp.chat_app.model;
 
-import com.chatapp.chat_app.dto.ClientStatus;
+
 import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 
 @Data
@@ -12,20 +13,20 @@ import java.time.LocalDateTime;
 @Table(name = "clients")
 public class ClientEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
+
+    private String clientName;
+
     private LocalDateTime arrivedAt;
 
-    @Enumerated(EnumType.STRING)
-    private ClientStatus status;
+
 
     public ClientEntity() {}
 
-    public ClientEntity(String name) {
-        this.id = name ;
-        this.arrivedAt = LocalDateTime.now() ;
-        this.status = ClientStatus.CREATED;
-
+    public ClientEntity(String clientName) {
+        this.id = UUID.randomUUID().toString(); // always generate UUID
+        this.clientName = clientName;
+        this.arrivedAt = LocalDateTime.now();
     }
 
 }
