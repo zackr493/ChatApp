@@ -1,6 +1,6 @@
 package com.chatapp.chat_app.dto;
 
-public enum ClientStatus {
+public enum SessionStatus {
     CREATED,
     WAITING,
     ASSIGNED,
