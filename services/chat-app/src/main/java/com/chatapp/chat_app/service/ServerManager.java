@@ -10,6 +10,8 @@ import com.chatapp.chat_app.repository.LostClientRepository;
 import com.chatapp.chat_app.repository.ServerRepository;
 import com.chatapp.chat_app.repository.SessionRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 
@@ -31,6 +33,9 @@ public class ServerManager {
     private final ServerRepository serverRepository;
     private final LostClientRepository lostClientRepository;
 
+    private static final Logger logger = LoggerFactory.getLogger(ServerManager.class);
+
+
     private final int maxServers;
 
     // instead of queue, we use semaphore to allows access to a limited number of resource,
@@ -40,25 +45,39 @@ public class ServerManager {
     // acquire() -> tries, else waits
     // tryAcquire -> tries, or fail if timeout
     // release()
-    private final Semaphore semaphore = new Semaphore(maxServers);
+    private final Semaphore semaphore ;
+
+    public ServerManager(ClientRepository clientRepository,
+                         SessionRepository sessionRepository,
+                         ServerRepository serverRepository,
+                         LostClientRepository lostClientRepository,
+                         int maxServers) {
+        this.clientRepository = clientRepository;
+        this.sessionRepository = sessionRepository;
+        this.serverRepository = serverRepository;
+        this.lostClientRepository = lostClientRepository;
+        this.maxServers = maxServers;
+        this.semaphore = new Semaphore(maxServers); // init here
+    }
+
 
     public void handleClientJoining(String clientId, String sessionId, int timeToExpiry) {
+        logger.info("Handling client joining: clientId={}, sessionId={}, timeout={}ms", clientId, sessionId, timeToExpiry);
 
         try {
-
             // find session tied to client
             SessionEntity session = sessionRepository.findById(sessionId)
-                    .orElseThrow(() -> new RuntimeException("Session not found"));
+                    .orElseThrow(() -> {
+                        logger.warn("Session not found: {}", sessionId);
+                        return new RuntimeException("Session not found");
+                    });
 
             session.setStatus(SessionStatus.WAITING);
             sessionRepository.save(session);
+            logger.info("Session {} status set to WAITING", sessionId);
 
-
-            // try to acquire a server within 5 minutes (in MS )
+            // try to acquire a server within the given timeout
             boolean serverAcquired = semaphore.tryAcquire(timeToExpiry, java.util.concurrent.TimeUnit.MILLISECONDS);
-            // if server not acquired within 5 minutes, we add to lost clients
-
-
 
             if (!serverAcquired) {
                 LostClientEntity lost = LostClientEntity.builder()
@@ -66,51 +85,40 @@ public class ServerManager {
                         .createdAt(LocalDateTime.now())
                         .build();
                 lostClientRepository.save(lost);
-
-                // we update the session to finish
-
-
-
-
-
-                System.out.println("LOST CLIENT: " + clientId);
+                logger.warn("Lost client: {}", clientId);
                 return;
-
-
             }
 
-
-
-            // when server acquired, find server that is free, there should be one available
+            // find available server
             ServerEntity serverEntity = getAvailServer();
-
             if (serverEntity == null) {
+                logger.warn("No available server found for client: {}, releasing semaphore", clientId);
                 semaphore.release();
                 return;
             }
 
             serverEntity.setCurrClientId(clientId);
             serverRepository.save(serverEntity);
+            logger.info("Client {} assigned to server {}", clientId, serverEntity.getId());
 
-            // find client instance, we find client so we can do set actions with the client,
-            // in this case, this is simulated
+            // find client entity
             ClientEntity client = clientRepository.findById(clientId)
-                    .orElseThrow(() -> new RuntimeException("Client not found"));
+                    .orElseThrow(() -> {
+                        logger.warn("Client not found: {}", clientId);
+                        return new RuntimeException("Client not found");
+                    });
 
-
-
-            // attach server to existing session
+            // attach server to session
             session.setServerEntity(serverEntity);
             session.setStatus(SessionStatus.ASSIGNED);
             sessionRepository.save(session);
-
-            System.out.println(clientId + " is connected to " + serverEntity.getId());
-
-
-
+            logger.info("Session {} updated with server {} and status ASSIGNED", sessionId, serverEntity.getId());
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            logger.error("Thread interrupted while handling client joining: clientId={}, sessionId={}", clientId, sessionId, e);
+        } catch (Exception e) {
+            logger.error("Error while handling client joining: clientId={}, sessionId={}", clientId, sessionId, e);
         }
     }
 
