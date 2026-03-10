@@ -20,14 +20,12 @@ public class ClientController {
     // CREATE
     @PostMapping
     public ApiResponse<ClientEntity> createClient(@RequestBody ClientRequest request) {
-        if (request.getClientId() == null || request.getClientId().isBlank()) {
-            return new ApiResponse<>(400, "Client ID cannot be empty", null);
+        if (request.getClientName() == null || request.getClientName().isBlank()) {
+            return new ApiResponse<>(400, "Client Name cannot be empty", null);
         }
 
-        ClientEntity client = clientService.createClient(request.getClientId());
-        if (client == null) {
-            return new ApiResponse<>(409, "Client already exists", null);
-        }
+        ClientEntity client = clientService.createClient(request.getClientName());
+
 
         return new ApiResponse<>(200, "Client created successfully", client);
     }
@@ -38,7 +36,7 @@ public class ClientController {
         return clientService.getAllClients();
     }
 
-    // READ by client name
+    // READ by client id
     @GetMapping("/{clientId}")
     public ApiResponse<ClientEntity> getClientById(@PathVariable String clientId) {
         ClientEntity client = clientService.getClient(clientId);
