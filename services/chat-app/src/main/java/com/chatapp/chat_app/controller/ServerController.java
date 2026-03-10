@@ -1,6 +1,8 @@
 package com.chatapp.chat_app.controller;
 
 import com.chatapp.chat_app.dto.*;
+import com.chatapp.chat_app.model.ClientEntity;
+import com.chatapp.chat_app.model.ServerEntity;
 import com.chatapp.chat_app.service.ServerManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -26,19 +28,19 @@ public class ServerController {
         }
 
 
-        Client client = serverManager.getClient(request.getClientId());
-        if (client == null) {
+        ClientEntity clientEntity = serverManager.getClient(request.getClientId());
+        if (clientEntity == null) {
             return new ApiResponse<>(404, "Client not found. Please create the client first.", null);
         }
 
         int timeout = (request.getTimeoutMs() != null) ? request.getTimeoutMs() : 300000;
 
 
-        new Thread(() -> serverManager.handleClientJoining(client,  timeout)).start();
+        new Thread(() -> serverManager.handleClientJoining(clientEntity,  timeout)).start();
 
         return new ApiResponse<>(200,
-                "Client " + client.getId() + " is trying to join a server",
-                client.getId());
+                "Client " + clientEntity.getId() + " is trying to join a server",
+                clientEntity.getId());
 
 
 
@@ -61,18 +63,18 @@ public class ServerController {
 
     // GET all servers
     @GetMapping
-    public List<Server> getAllServers() {
+    public List<ServerEntity> getAllServers() {
         return serverManager.getServers();
     }
 
     // GET server by name
     @GetMapping("/{serverName}")
-    public Server getServerByName(@PathVariable String serverName) {
-        Server server = serverManager.getServerByName(serverName);
-        if (server == null) {
+    public ServerEntity getServerByName(@PathVariable String serverName) {
+        ServerEntity serverEntity = serverManager.getServerByName(serverName);
+        if (serverEntity == null) {
             throw new RuntimeException("Server not found: " + serverName);
         }
-        return server;
+        return serverEntity;
     }
 
 
