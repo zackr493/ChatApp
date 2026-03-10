@@ -15,17 +15,15 @@ import java.util.List;
 public class ClientService {
 
     private final ClientRepository clientRepository;
-    private final SessionRepository sessionRepository;
 
-    public ClientEntity createClient(String clientId) {
-        if (clientRepository.existsById(clientId)) return null;
+    public ClientEntity createClient(String clientName) {
 
-        ClientEntity client = new ClientEntity(clientId);
+        // since we generate uuid for each clientname , we accept repeats for simplicity
+
+        ClientEntity client = new ClientEntity(clientName);
         clientRepository.save(client);
 
-        SessionEntity session = new SessionEntity(client);
-        session.setClientEntity(client);
-        sessionRepository.save(session);
+
 
         return client;
     }
