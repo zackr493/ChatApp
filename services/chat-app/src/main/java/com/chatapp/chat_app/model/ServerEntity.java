@@ -1,12 +1,18 @@
-package com.chatapp.chat_app.dto;
+package com.chatapp.chat_app.model;
 
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Data;
 
 
 
 @Data
-public class Server {
+@Entity
+@Table(name = "servers")
+public class ServerEntity {
 
+    @Id
     private String id;
 
     private int numClientsDay = 0;
@@ -17,9 +23,9 @@ public class Server {
 
     private int ratingCount = 0;
 
-    private Client currClient ;
+    private String currClientEntity;
 
-    public Server (String id) {
+    public ServerEntity(String id) {
         this.id = id ;
     }
 
@@ -28,7 +34,7 @@ public class Server {
             return 0;
         }
 
-        return ratingTotal / ratingCount ;
+        return (double) ratingTotal / ratingCount ;
     }
 
 }
