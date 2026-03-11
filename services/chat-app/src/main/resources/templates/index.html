@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>ChatApp</title>
+    <style>
+
+    </style>
+</head>
+<body>
+
+<h1>ChatApp</h1>
+
+<!-- CREATE CLIENT -->
+<section>
+    <h2>Clients</h2>
+    <input id="clientName" type="text" placeholder="Client name" />
+    <button onclick="createClient()">Create Client</button>
+
+    <table id="clientTable" style="margin-top:1rem">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>ID</th>
+                <th>Session Status</th>
+                <th>Server</th>
+                <th>Session ID</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="clientRows"></tbody>
+    </table>
+</section>
+
+<!-- SERVERS -->
+<section style="margin-top:1rem">
+    <h2>Servers</h2>
+    <select id="serverSelect" onchange="showServerStats()">
+        <option value="">— select a server —</option>
+    </select>
+    <button onclick="loadServers()" style="margin-left:0.5rem">↻ Refresh</button>
+
+    <div id="serverStats" style="margin-top:1rem">
+        <div class="stat-grid">
+            <div class="stat-box"><div class="label">NAME</div><div class="value" id="sName">—</div></div>
+            <div class="stat-box"><div class="label">CURRENT CLIENT</div><div class="value" id="sCurr">—</div></div>
+            <div class="stat-box"><div class="label">CLIENTS TODAY</div><div class="value" id="sDay">—</div></div>
+            <div class="stat-box"><div class="label">CLIENTS THIS MONTH</div><div class="value" id="sMonth">—</div></div>
+            <div class="stat-box"><div class="label">AVG RATING</div><div class="value" id="sRating">—</div></div>
+            <div class="stat-box"><div class="label">TOTAL RATINGS</div><div class="value" id="sRatingCount">—</div></div>
+        </div>
+    </div>
+</section>
+
+<script th:inline="none">
+    // clientId → { name, clientId, sessionId, status, serverName }
+    const clients = {};
+
+    async function createClient() {
+        const name = document.getElementById('clientName').value.trim();
+
+        if (!name) {
+            return alert('Enter a name');
+        }
+
+        const res  = await fetch('/clients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clientName: name })
+        });
+
+        const data = await res.json();
+        if (data.code !== 200) return alert(data.message);
+
+        const id = data.data.id;
+
+        clients[id] = { name, clientId: id, sessionId: null, status: null, serverName: null };
+
+        renderClients();
+
+        document.getElementById('clientName').value = '';
+    }
+
+    async function join(clientId) {
+        const res  = await fetch('/servers/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clientId, timeoutMs: 5000 })
+        });
+        const data = await res.json();
+        if (data.code !== 200) return alert(data.message);
+
+        clients[clientId].sessionId = data.data;
+        clients[clientId].status    = 'WAITING';
+        renderClients();
+        pollSession(clientId);
+    }
+
+    async function loadClients() {
+    // fetch all clients
+    const cRes    = await fetch('/clients');
+    const cList   = await cRes.json();
+
+    // fetch all sessions
+    const sRes    = await fetch('/session');
+    const sData   = await sRes.json();
+    const sessions = sData.code === 200 ? sData.data : [];
+
+    const sessionMap = {};
+    for (const s of sessions) {
+        const cid = s.clientEntity.id;
+        // keep the most recent session per client
+        if (!sessionMap[cid] || s.startTime > sessionMap[cid].startTime) {
+            sessionMap[cid] = s;
+        }
+    }
+
+    for (const c of cList) {
+        const session = sessionMap[c.id];
+        clients[c.id] = {
+            name:       c.clientName,
+            clientId:   c.id,
+            sessionId:  session?.id ?? null,
+            status:     session?.status ?? null,
+            serverName: session?.serverEntity?.serverName ?? null
+        };
+
+        if (session?.status === 'WAITING') {
+            pollSession(c.id);
+        }
+    }
+
+    renderClients();
+}
+
+    async function quit(clientId) {
+        const rating = prompt('Rate the session (1-5):');
+        if (!rating || isNaN(rating)) return;
+
+        const sessionId = clients[clientId].sessionId;
+        const res = await fetch('/servers/finish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId, rating: parseInt(rating) })
+        });
+        const data = await res.json();
+        if (data.code !== 200) return alert(data.message);
+
+        clients[clientId].status = 'FINISHED';
+        renderClients();
+    }
+
+    function pollSession(clientId) {
+        const timer = setInterval(async () => {
+            const sessionId = clients[clientId].sessionId;
+            if (!sessionId) return clearInterval(timer);
+
+            const res  = await fetch(`/session/${sessionId}`);
+            const data = await res.json();
+            if (data.code !== 200) return;
+
+            const session = data.data;
+            clients[clientId].status     = session.status;
+            clients[clientId].serverName = session.serverEntity?.serverName ?? null;
+            renderClients();
+
+            if (['ASSIGNED','LOST','FINISHED'].includes(session.status)) {
+                clearInterval(timer);
+            }
+        }, 2000);
+    }
+
+    function renderClients() {
+        const tbody = document.getElementById('clientRows');
+        tbody.innerHTML = '';
+
+        for (const c of Object.values(clients)) {
+            const status   = c.status ?? '—';
+            const canJoin = !c.sessionId || c.status === 'LOST';
+            const canQuit  = c.status === 'ASSIGNED';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${c.name}</td>
+                <td style="color:#888;font-size:0.75rem">${c.clientId.substring(0,8)}...</td>
+                <td><span class="tag ${status.toLowerCase()}">${status}</span></td>
+                <td>${c.serverName ?? '—'}</td>
+                <td style="color:#888;font-size:0.75rem">${c.sessionId ? c.sessionId.substring(0,8)+'...' : '—'}</td>
+                <td>
+                    <button class="primary" onclick="join('${c.clientId}')" ${canJoin ? '' : 'disabled'}>Join</button>
+                    <button class="danger"  onclick="quit('${c.clientId}')" ${canQuit ? '' : 'disabled'}>Quit</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+    }
+
+    async function loadServers() {
+        const res     = await fetch('/servers');
+        const servers = await res.json();
+
+        const sel = document.getElementById('serverSelect');
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">— select a server —</option>';
+
+        for (const s of servers) {
+            const opt = document.createElement('option');
+            opt.value           = s.id;
+            opt.textContent     = s.serverName + (s.currClientId ? ' [BUSY]' : ' [IDLE]');
+            opt.dataset.server  = JSON.stringify(s);
+            sel.appendChild(opt);
+        }
+
+        if (cur) { sel.value = cur; showServerStats(); }
+    }
+
+    function showServerStats() {
+        const sel = document.getElementById('serverSelect');
+        const opt = sel.selectedOptions[0];
+        if (!opt || !opt.dataset.server) {
+            document.getElementById('serverStats').style.display = 'none';
+            return;
+        }
+
+        const s     = JSON.parse(opt.dataset.server);
+        const stars = '★'.repeat(Math.round(s.averageRating)) + '☆'.repeat(5 - Math.round(s.averageRating));
+
+        document.getElementById('sName').textContent        = s.serverName;
+        document.getElementById('sCurr').textContent        = s.currClientId ? s.currClientId.substring(0,8)+'...' : 'None';
+        document.getElementById('sDay').textContent         = s.numClientsDay;
+        document.getElementById('sMonth').textContent       = s.numClientsMonth;
+        document.getElementById('sRating').innerHTML        = `<span class="star">${stars}</span> ${s.averageRating.toFixed(1)}`;
+        document.getElementById('sRatingCount').textContent = s.ratingCount;
+
+        document.getElementById('serverStats').style.display = 'block';
+    }
+
+    loadClients();
+    loadServers();
+    setInterval(loadServers, 5000);
+</script>
+</body>
+</html>
