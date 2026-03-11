@@ -80,6 +80,8 @@ public class ServerController {
         }
     }
 
+
+
     // triggered by finish button, should only be called when client successfully joins
     @PostMapping("/finish")
     public ApiResponse<String> finishSession(@RequestBody FinishRequest request) {

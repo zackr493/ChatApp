@@ -11,6 +11,13 @@
 
 <h1>ChatApp</h1>
 
+<div id="globalStats" style="margin-bottom:1rem">
+    <strong>Total Approached:</strong> <span id="statApproached">0</span> &nbsp;|&nbsp;
+    <strong>Total Served:</strong> <span id="statServed">0</span> &nbsp;|&nbsp;
+    <strong>Total Lost:</strong> <span id="statLost">0</span>
+    <button onclick="loadClients()" style="margin-left:0.5rem">↻ Refresh</button>
+</div>
+
 <!-- CREATE CLIENT -->
 <section>
     <h2>Clients</h2>
@@ -117,6 +124,7 @@
         const sRes    = await fetch('/session');
         const sData   = await sRes.json();
         const sessions = sData.code === 200 ? sData.data : [];
+        updateGlobalStats(sessions);
 
         const sessionMap = {};
         for (const s of sessions) {
@@ -223,6 +231,16 @@
 
         document.getElementById('serverStats').style.display = 'block';
     }
+
+    function updateGlobalStats(sessions) {
+    const approached = sessions.length;
+    const served     = sessions.filter(s => s.status === 'FINISHED').length;
+    const lost       = sessions.filter(s => s.status === 'LOST').length;
+
+    document.getElementById('statApproached').textContent = approached;
+    document.getElementById('statServed').textContent     = served;
+    document.getElementById('statLost').textContent       = lost;
+}
 
     loadClients();
     loadServers();
