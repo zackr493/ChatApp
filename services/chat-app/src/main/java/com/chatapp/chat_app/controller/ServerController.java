@@ -96,6 +96,8 @@ public class ServerController {
         }
     }
 
+
+
     @GetMapping
     public List<ServerEntity> getAllServers() {
         return serverManager.getAllServers();
