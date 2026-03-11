@@ -20,36 +20,28 @@ public class ServerEntity {
     @Id
     private String id;
 
-    // this should already be generated , this is just fallback
+    // in case id is not set
     @PrePersist
     public void prePersist() {
-        if (id == null) {
-            id = java.util.UUID.randomUUID().toString();
-        }
+        if (id == null) id = UUID.randomUUID().toString();
     }
 
-    private int numClientsDay = 0;
+    private String serverName;
 
+    private int numClientsDay   = 0;
     private int numClientsMonth = 0;
+    private int ratingTotal     = 0;
+    private int ratingCount     = 0;
 
-    private int ratingTotal = 0;
-
-    private int ratingCount = 0;
-
-    // nullable true
     private String currClientId;
 
-    // this key provides optimisticLocking, when transactions occur, others are blocked
-    // checks version before update, retries on conflict
+
+    // for optimistic locking , we dont use pessimistic to avoid deadlocks
+    //https://stackoverflow.com/questions/129329/optimistic-vs-pessimistic-locking
     @Version
     private Long version;
 
     public double getAverageRating() {
-        if (ratingCount == 0) {
-            return 0;
-        }
-
-        return (double) ratingTotal / ratingCount ;
+        return ratingCount == 0 ? 0.0 : (double) ratingTotal / ratingCount;
     }
-
 }

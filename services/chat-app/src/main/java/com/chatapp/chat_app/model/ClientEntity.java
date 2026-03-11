@@ -24,7 +24,7 @@ public class ClientEntity {
     public ClientEntity() {}
 
     public ClientEntity(String clientName) {
-        this.id = UUID.randomUUID().toString(); // always generate UUID
+        this.id = UUID.randomUUID().toString();
         this.clientName = clientName;
         this.arrivedAt = LocalDateTime.now();
     }

@@ -4,5 +4,6 @@ public enum SessionStatus {
     CREATED,
     WAITING,
     ASSIGNED,
-    FINISHED
+    FINISHED,
+    LOST
 }

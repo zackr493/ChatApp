@@ -15,10 +15,11 @@ public class LostClientEntity {
     @Id
     private String id;
 
+    // in case id is not set
     @PrePersist
     public void prePersist() {
         if (id == null) {
-            id = java.util.UUID.randomUUID().toString();  // auto-generate UUID string
+            id = java.util.UUID.randomUUID().toString();
         }
     }
 
