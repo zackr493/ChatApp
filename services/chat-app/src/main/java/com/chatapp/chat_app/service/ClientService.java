@@ -19,7 +19,6 @@ public class ClientService {
     public ClientEntity createClient(String clientName) {
 
         // since we generate uuid for each clientname , we accept repeats for simplicity
-
         ClientEntity client = new ClientEntity(clientName);
         clientRepository.save(client);
 

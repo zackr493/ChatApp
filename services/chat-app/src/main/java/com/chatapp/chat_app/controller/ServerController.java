@@ -28,154 +28,95 @@ import java.util.concurrent.ExecutorService;
 @RequiredArgsConstructor
 public class ServerController {
 
-    private final ClientRepository clientRepository;
-    private final SessionRepository sessionRepository;
-
-    private final ServerManager serverManager;
-    private final ExecutorService executorService;
-    private final SessionService sessionService;
-
     private static final Logger logger = LoggerFactory.getLogger(ServerController.class);
 
+    private final ClientRepository  clientRepository;
+    private final SessionRepository sessionRepository;
+    private final ServerManager     serverManager;
+    private final SessionService    sessionService;
 
+
+    // allows clients to be added to queue , and handled by free server
     @PostMapping("/join")
     public ApiResponse<String> joinServer(@RequestBody JoinRequest request) {
-        logger.info("Received join server request for clientId={}", request.getClientId());
+        logger.info("Received join request: clientId={}", request.getClientId());
 
         if (request.getClientId() == null || request.getClientId().isBlank()) {
-            logger.warn("Join server failed: Client ID is empty");
-            return new ApiResponse<>(400, "Client name cannot be empty", null);
+            return new ApiResponse<>(400, "Client ID cannot be empty", null);
         }
 
         try {
-            // find associated client
-            ClientEntity client = clientRepository.findById(request.getClientId())
-                    .orElseThrow(() -> {
-                        logger.warn("Client does not exist: {}", request.getClientId());
-                        return new RuntimeException("Client does not exist");
-                    });
 
-            // creates a session
+            // get client from db
+            ClientEntity client = clientRepository.findById(request.getClientId())
+                    .orElseThrow(() -> new RuntimeException("Client does not exist: " + request.getClientId()));
+
+
+            // create session
             SessionEntity session = SessionEntity.builder()
+                    .id(java.util.UUID.randomUUID().toString())
                     .clientEntity(client)
                     .startTime(LocalDateTime.now())
-                    .status(SessionStatus.CREATED)
+                    .status(SessionStatus.WAITING)
                     .build();
-
             session = sessionRepository.save(session);
-            logger.info("Session created: sessionId={}, clientId={}", session.getId(), client.getId());
 
-            int timeout = (request.getTimeoutMs() != null) ? request.getTimeoutMs() : 300000;
-            final String sessionId = session.getId();
+            int timeoutMs = (request.getTimeoutMs() != null) ? request.getTimeoutMs() : 300_000;
 
-            // limit threads
-            executorService.submit(() -> {
-                logger.debug("Submitting async task for client joining: clientId={}, sessionId={}, timeout={}",
-                        client.getId(), sessionId, timeout);
-                serverManager.handleClientJoining(request.getClientId(), sessionId, timeout);
-            });
+            // add client , session into queue
+            serverManager.enqueueClient(client.getId(), session.getId(), timeoutMs);
 
-            logger.info("Client {} is attempting to join a server with session {}", client.getId(), sessionId);
+            logger.info("Client {} enqueued with sessionId={}", client.getId(), session.getId());
             return new ApiResponse<>(200,
-                    "Client " + client.getId() + " is trying to join a server",
-                    client.getId());
+                    "Joined queue. Poll GET /session/" + session.getId() + " to check status.",
+                    session.getId());   // return sessionId so client can poll for status
 
+        } catch (RuntimeException e) {
+            logger.warn("Join failed: {}", e.getMessage());
+            return new ApiResponse<>(400, e.getMessage(), null);
         } catch (Exception e) {
-            logger.error("Error while client {} was trying to join server", request.getClientId(), e);
+            logger.error("Unexpected error on join", e);
             return new ApiResponse<>(500, "Internal server error", null);
         }
     }
 
-
+    // triggered by finish button, should only be called when client successfully joins
     @PostMapping("/finish")
     public ApiResponse<String> finishSession(@RequestBody FinishRequest request) {
-        String sessionId = request.getSessionId();
-        int rating = request.getRating();
-
-        logger.info("Received request to finish session: sessionId={}, rating={}", sessionId, rating);
+        logger.info("Finish request: sessionId={}, rating={}", request.getSessionId(), request.getRating());
 
         try {
-            sessionService.finishSession(sessionId, rating); // your ServerManager handles server updates safely
-            logger.info("Session {} ended successfully", sessionId);
-            return new ApiResponse<>(
-                    200,
-                    "Session " + sessionId + " ended",
-                    ""
-            );
+            sessionService.finishSession(request.getSessionId(), request.getRating());
+            return new ApiResponse<>(200, "Session finished", request.getSessionId());
         } catch (Exception e) {
-            logger.error("Error finishing session: {}", sessionId, e);
-            return new ApiResponse<>(
-                    500,
-                    "Internal Server Error",
-                    null
-            );
-        }
-    }
-
-    // GET all servers
-    @GetMapping
-    public List<ServerEntity> getAllServers() {
-        logger.info("Received request to fetch all servers");
-
-        try {
-            List<ServerEntity> servers = serverManager.getAllServers();
-            logger.info("Fetched {} servers successfully", servers.size());
-            return servers;
-        } catch (Exception e) {
-            logger.error("Error occurred while fetching all servers", e);
-            throw e; // keep behavior unchanged
-        }
-    }
-
-    // GET server by id
-    @GetMapping("/{serverId}")
-    public ApiResponse<ServerEntity> getServerById(@PathVariable String serverId) {
-        logger.info("Received request to fetch server by ID: {}", serverId);
-
-        try {
-            Optional<ServerEntity> serverOpt = serverManager.getServerById(serverId);
-
-            if (serverOpt.isPresent()) {
-                logger.info("Server found: id={}", serverId);
-                return new ApiResponse<>(200, "Server found", serverOpt.get());
-            } else {
-                logger.warn("Server not found: {}", serverId);
-                return new ApiResponse<>(404, "Server not found: " + serverId, null);
-            }
-        } catch (IllegalArgumentException e) {
-            logger.error("Invalid server ID format: {}", serverId, e);
-            return new ApiResponse<>(400, "Invalid server ID format: " + serverId, null);
-        } catch (Exception e) {
-            logger.error("Unexpected error while fetching server: {}", serverId, e);
+            logger.error("Error finishing session: {}", request.getSessionId(), e);
             return new ApiResponse<>(500, "Internal server error", null);
         }
+    }
+
+    @GetMapping
+    public List<ServerEntity> getAllServers() {
+        return serverManager.getAllServers();
+    }
+
+    @GetMapping("/{serverId}")
+    public ApiResponse<ServerEntity> getServerById(@PathVariable String serverId) {
+        Optional<ServerEntity> serverOpt = serverManager.getServerById(serverId);
+        return serverOpt
+                .map(s  -> new ApiResponse<>(200, "Server found", s))
+                .orElse(new ApiResponse<>(404, "Server not found: " + serverId, null));
     }
 
     @PostMapping
     public ApiResponse<ServerEntity> createServer() {
-        logger.info("Received request to create a new server");
-
         try {
-            // since we don't need params for servers
             ServerEntity server = serverManager.createServer();
-            logger.info("Server created successfully: id={}", server.getId());
-
-            return new ApiResponse<>(
-                    200,
-                    "Server created successfully",
-                    server
-            );
+            return new ApiResponse<>(200, "Server created", server);
+        } catch (IllegalStateException e) {
+            return new ApiResponse<>(400, e.getMessage(), null);
         } catch (Exception e) {
-            logger.error("Error occurred while creating server", e);
-            return new ApiResponse<>(
-                    500,
-                    "Internal server error",
-                    null
-            );
+            logger.error("Error creating server", e);
+            return new ApiResponse<>(500, "Internal server error", null);
         }
     }
-
-
-
-
 }

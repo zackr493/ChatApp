@@ -6,8 +6,8 @@ import com.chatapp.chat_app.model.SessionEntity;
 import com.chatapp.chat_app.repository.ServerRepository;
 import com.chatapp.chat_app.repository.SessionRepository;
 import lombok.RequiredArgsConstructor;
-import org.apache.catalina.Server;
-import org.apache.catalina.Session;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
@@ -16,26 +16,30 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class SessionService {
 
-    private final SessionRepository sessionRepository;
-    private final ServerRepository serverRepository;
+    private static final Logger logger = LoggerFactory.getLogger(SessionService.class);
 
-    @Transactional
+    private final SessionRepository sessionRepository;
+    private final ServerManager     serverManager;      // needed to signal the latch
+
     public void finishSession(String sessionId, int rating) {
+        logger.info("Finishing session: sessionId={}, rating={}", sessionId, rating);
 
         SessionEntity session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new RuntimeException("Session not found"));
+                .orElseThrow(() -> new RuntimeException("Session not found: " + sessionId));
 
-
-
-        ServerEntity server = session.getServerEntity();
-        if (server != null) {
-            serverRepository.incrementStats(server.getId(), rating);
+        if (session.getStatus() == SessionStatus.FINISHED || session.getStatus() == SessionStatus.LOST) {
+            logger.warn("Session {} is already in terminal state: {}", sessionId, session.getStatus());
+            return;
         }
 
-        // Update session
         session.setEndTime(LocalDateTime.now());
         session.setRating(rating);
         session.setStatus(SessionStatus.FINISHED);
         sessionRepository.save(session);
+
+        // release worker thread
+        serverManager.signalFinish(sessionId, rating);
+
+        logger.info("Session {} finished successfully", sessionId);
     }
 }
