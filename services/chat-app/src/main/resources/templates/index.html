@@ -16,6 +16,7 @@
     <h2>Clients</h2>
     <input id="clientName" type="text" placeholder="Client name" />
     <button onclick="createClient()">Create Client</button>
+    <button onclick="loadClients()" style="margin-left:0.5rem">↻ Refresh</button>
 
     <table id="clientTable" style="margin-top:1rem">
         <thead>
@@ -93,45 +94,51 @@
         clients[clientId].sessionId = data.data;
         clients[clientId].status    = 'WAITING';
         renderClients();
-        pollSession(clientId);
+    }
+
+    async function refreshSession(clientId) {
+        const sessionId = clients[clientId].sessionId;
+        if (!sessionId) return;
+
+        const res  = await fetch(`/session/${sessionId}`);
+        const data = await res.json();
+        if (data.code !== 200) return;
+
+        const session = data.data;
+        clients[clientId].status     = session.status;
+        clients[clientId].serverName = session.serverEntity?.serverName ?? null;
+        renderClients();
     }
 
     async function loadClients() {
-    // fetch all clients
-    const cRes    = await fetch('/clients');
-    const cList   = await cRes.json();
+        const cRes    = await fetch('/clients');
+        const cList   = await cRes.json();
 
-    // fetch all sessions
-    const sRes    = await fetch('/session');
-    const sData   = await sRes.json();
-    const sessions = sData.code === 200 ? sData.data : [];
+        const sRes    = await fetch('/session');
+        const sData   = await sRes.json();
+        const sessions = sData.code === 200 ? sData.data : [];
 
-    const sessionMap = {};
-    for (const s of sessions) {
-        const cid = s.clientEntity.id;
-        // keep the most recent session per client
-        if (!sessionMap[cid] || s.startTime > sessionMap[cid].startTime) {
-            sessionMap[cid] = s;
+        const sessionMap = {};
+        for (const s of sessions) {
+            const cid = s.clientEntity.id;
+            if (!sessionMap[cid] || s.startTime > sessionMap[cid].startTime) {
+                sessionMap[cid] = s;
+            }
         }
-    }
 
-    for (const c of cList) {
-        const session = sessionMap[c.id];
-        clients[c.id] = {
-            name:       c.clientName,
-            clientId:   c.id,
-            sessionId:  session?.id ?? null,
-            status:     session?.status ?? null,
-            serverName: session?.serverEntity?.serverName ?? null
-        };
-
-        if (session?.status === 'WAITING') {
-            pollSession(c.id);
+        for (const c of cList) {
+            const session = sessionMap[c.id];
+            clients[c.id] = {
+                name:       c.clientName,
+                clientId:   c.id,
+                sessionId:  session?.id ?? null,
+                status:     session?.status ?? null,
+                serverName: session?.serverEntity?.serverName ?? null
+            };
         }
-    }
 
-    renderClients();
-}
+        renderClients();
+    }
 
     async function quit(clientId) {
         const rating = prompt('Rate the session (1-5):');
@@ -150,34 +157,15 @@
         renderClients();
     }
 
-    function pollSession(clientId) {
-        const timer = setInterval(async () => {
-            const sessionId = clients[clientId].sessionId;
-            if (!sessionId) return clearInterval(timer);
-
-            const res  = await fetch(`/session/${sessionId}`);
-            const data = await res.json();
-            if (data.code !== 200) return;
-
-            const session = data.data;
-            clients[clientId].status     = session.status;
-            clients[clientId].serverName = session.serverEntity?.serverName ?? null;
-            renderClients();
-
-            if (['ASSIGNED','LOST','FINISHED'].includes(session.status)) {
-                clearInterval(timer);
-            }
-        }, 2000);
-    }
-
     function renderClients() {
         const tbody = document.getElementById('clientRows');
         tbody.innerHTML = '';
 
         for (const c of Object.values(clients)) {
             const status   = c.status ?? '—';
-            const canJoin = !c.sessionId || c.status === 'LOST';
+            const canJoin  = !c.sessionId || c.status === 'LOST';
             const canQuit  = c.status === 'ASSIGNED';
+            const canRefresh = c.sessionId && c.status === 'WAITING';
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -188,6 +176,7 @@
                 <td style="color:#888;font-size:0.75rem">${c.sessionId ? c.sessionId.substring(0,8)+'...' : '—'}</td>
                 <td>
                     <button class="primary" onclick="join('${c.clientId}')" ${canJoin ? '' : 'disabled'}>Join</button>
+                    <button onclick="refreshSession('${c.clientId}')" ${canRefresh ? '' : 'disabled'}>↻</button>
                     <button class="danger"  onclick="quit('${c.clientId}')" ${canQuit ? '' : 'disabled'}>Quit</button>
                 </td>
             `;
@@ -237,7 +226,6 @@
 
     loadClients();
     loadServers();
-    setInterval(loadServers, 5000);
 </script>
 </body>
 </html>
