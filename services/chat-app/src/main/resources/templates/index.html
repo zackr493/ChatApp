@@ -93,7 +93,7 @@
         const res  = await fetch('/servers/join', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ clientId, timeoutMs: 5000 })
+            body: JSON.stringify({ clientId, timeoutMs: 30000 })
         });
         const data = await res.json();
         if (data.code !== 200) return alert(data.message);
