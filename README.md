@@ -39,7 +39,34 @@ Key settings in `src/main/resources/application.properties`:
 |----------|---------|-------------|
 | `chat.max-servers` | `5` | Number of concurrent server workers |
 | `spring.datasource.url` | `jdbc:h2:file:./chatapp` | H2 database location |
-| `server.tomcat.max-threads` | `500` | Max Tomcat HTTP threads |
+
+
+## How It Works
+
+When a client joins, the following flow occurs:
+```
+Client → POST /servers/join
+       → Session created (status: WAITING)
+       → Added to LinkedBlockingQueue
+              ↓
+       Worker thread frees up, dequeues next client
+       → Checks if client has expired (isExpired())
+       → If expired → marked LOST, worker loops back for next client
+       → If valid   → Session updated (status: ASSIGNED)
+       → Worker blocks on CountDownLatch
+
+Client → POST /servers/finish
+       → Session updated (status: FINISHED)
+       → CountDownLatch released
+       → Worker clears server slot + updates stats
+       → Worker loops back for next client in queue
+
+Note: If all workers are busy, expired clients remain in the queue
+until a worker frees up — they are marked LOST at that point.
+```
+
+
+
 
 ## Load Testing
 
