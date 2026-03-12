@@ -1,3 +1,56 @@
+# ChatServer
+
+A concurrent chat server built with Spring Boot that manages client-server communication through a thread pool architecture.
+
+## Prerequisites
+
+- Java 21+
+- Maven 3.8+
+
+## How to Run
+
+**1. Clone the repository:**
+```bash
+git clone 
+cd services/chat-app
+```
+
+**2. Build:**
+```bash
+mvn clean install
+```
+
+**3. Run:**
+```bash
+mvn spring:boot run
+```
+
+The app starts on `http://localhost:8080`.
+
+**4. Open the dashboard:**
+
+Navigate to `http://localhost:8080` in your browser.
+
+## Configuration
+
+Key settings in `src/main/resources/application.properties`:
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `chat.max-servers` | `5` | Number of concurrent server workers |
+| `spring.datasource.url` | `jdbc:h2:file:./chatapp` | H2 database location |
+| `server.tomcat.max-threads` | `500` | Max Tomcat HTTP threads |
+
+## Load Testing
+
+Place `load_test.sh` and `clients.txt` in the same folder, then:
+```bash
+chmod +x load_test.sh
+
+# default
+./load_test.sh
+
+
 ### LOADING TESTING RESULTS
 
 # Load Test Results
@@ -14,13 +67,13 @@
 
 ## Performance
 
-| Metric                  | Value       |
-|-------------------------|-------------|
-| Wall Clock Time         | 58s         |
+| Metric                  | Value          |
+|-------------------------|----------------|
+| Wall Clock Time         | 58s            |
 | Throughput              | ~1.4 clients/s |
-| Max Concurrent Sessions | 5           |
-| Theoretical Max Clients | ~95         |
-| Efficiency              | ~85%        |
+| Max Concurrent Sessions | 5              |
+| Theoretical Max Clients | ~95            |
+| Efficiency              | ~85%           |
 
 ### Speed
 81 clients were processed through a 5-worker concurrent queue in 58 seconds.
@@ -101,3 +154,48 @@ Compared to concurrent and iterative serving, forking delivered the highest
 throughput (5.8/s) and zero lost clients, but at the cost of spawning 82
 simultaneous threads and server slots — one per client. This approach does
 not scale beyond the number of available servers.
+
+### Logging Off
+```shell
+
+logging.level.root=OFF
+logging.level.com.chatapp.chat_app=DEBUG
+logging.file.name=archive/app.log
+logging.level.org.springframework.web=DEBUG
+```
+
+### Test Configuration
+- Servers: 5
+- Clients: 81
+- Chat Duration: 3s
+
+### Results
+
+| Metric | Logging Enabled | Logging Disabled |
+|--------|-----------------|-----------------|
+| Wall Clock Time | 59s             | 58s |
+| Throughput | ~1.37/s         | ~1.4/s |
+| Total Served | 81              | 81 |
+| Total Lost | 0               | 0 |
+
+- File logging had slight impact on overall performance. 
+
+
+## Async Logging vs Sync Logging
+
+
+## Logging Performance Comparison (1000 Clients, 20 Servers)
+
+### Results
+
+| Metric | No Logging | Sync Logging | Async Logging |
+|--------|-----------|--------------|---------------|
+| Wall Clock Time | 58s* | 231s | 229s |
+| Throughput | ~1.4/s* | ~4.3/s | ~4.4/s |
+
+Synchronous and asynchronous logging performed virtually identically at
+this scale . This is because the bottleneck
+at 1000 clients is likely network I/O and queue throughput, not disk writes.
+
+
+
