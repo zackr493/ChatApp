@@ -116,6 +116,31 @@ Maximum of 5 simultaneous sessions, limited by the number of server worker threa
 All remaining clients queue via `LinkedBlockingQueue` and are served as slots free up.
 
 
+
+## Concurrent Serving
+
+### Load Test Configuration
+
+| Metric | Value |
+|--------|-------|
+| Total Clients | 81 |
+| Chat Duration | 3s |
+| Queue Timeout | 30,000ms |
+| Batch Size | 100 |
+| Servers | 5 |
+
+### Results
+
+| Metric | Value |
+|--------|-------|
+| Total Approached | 81 |
+| Total Served | 81 |
+| Total Lost | 0 |
+| Wall Clock Time | 58s |
+| Throughput | ~1.4 clients/s |
+| Theoretical Max | ~95 |
+| Efficiency | ~85% |
+
 ## Iterative Serving
 
 ### Load Test Configuration
@@ -224,10 +249,10 @@ Switching to `AsyncAppender` decouples disk writes from worker threads entirely:
 
 ### Results
 
-| Metric | No Logging | Sync Logging | Async Logging |
-|--------|-----------|--------------|---------------|
-| Wall Clock Time | 58s* | 231s | 229s |
-| Throughput | ~1.4/s* | ~4.3/s | ~4.4/s |
+| Metric | Sync Logging | Async Logging |
+|--------|--------------|---------------|
+| Wall Clock Time | 231s | 229s |
+| Throughput | ~4.3/s | ~4.4/s |
 
 Asynchronous logging performed better than sync logging . 
 
