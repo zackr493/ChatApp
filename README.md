@@ -68,48 +68,7 @@ until a worker frees up — they are marked LOST at that point.
 
 
 
-## Load Testing
 
-Place `load_test.sh` and `clients.txt` in the same folder, then:
-```bash
-chmod +x load_test.sh
-
-# default
-./load_test.sh
-
-
-### LOADING TESTING RESULTS
-
-# Load Test Results
-
-## Configuration
-
-| Metric         | Value       |
-|----------------|-------------|
-| Total Clients  | 81          |
-| Chat Duration  | 3s          |
-| Queue Timeout  | 30,000ms    |
-| Batch Size     | 100         |
-| Servers        | 5           |
-
-## Performance
-
-| Metric                  | Value          |
-|-------------------------|----------------|
-| Wall Clock Time         | 58s            |
-| Throughput              | ~1.4 clients/s |
-| Max Concurrent Sessions | 5              |
-| Theoretical Max Clients | ~95            |
-| Efficiency              | ~85%           |
-
-### Speed
-81 clients were processed through a 5-worker concurrent queue in 58 seconds.
-
-### Load Factor
-With 3s chat duration per slot, each server can theoretically serve `58 / 3 = ~19`
-clients over the test period, giving a theoretical maximum of `5 × 19 = 95` clients.
-The system achieved 81 served — **85% of theoretical maximum** — indicating efficient
-performance under load.
 
 ### Concurrency
 Maximum of 5 simultaneous sessions, limited by the number of server worker threads.
@@ -166,11 +125,12 @@ All remaining clients queue via `LinkedBlockingQueue` and are served as slots fr
 | Efficiency | ~87% |
 
 With 1 server and 3s chat duration, the theoretical maximum is `98 / 3 = ~32` clients.
-The system achieved 28 served — **87% efficiency** — but 53 clients (65%) timed out
+
+The system achieved 28 served which is a **87% efficiency** but 53 clients (65%) timed out
 waiting since only one server slot was ever free at a time.
 
 Compared to concurrent serving, iterative delivered **3x less throughput** (0.3/s vs
-1.4/s) with a **65% lost client rate** vs 0% — demonstrating the limitation of
+1.4/s) with a **65% lost client rate** vs 0% , demonstrating the limitation of
 single-threaded serving under load.
 
 
@@ -198,7 +158,7 @@ single-threaded serving under load.
 | Theoretical Max | ~82 |
 | Efficiency | ~98% |
 
-With 82 dedicated server slots — one per client — every client was assigned
+With 82 dedicated server slots, one per client, every client was assigned
 immediately with no queuing. 14 seconds wall clock time reflects purely the
 chat duration with near-zero wait time.
 
@@ -232,13 +192,13 @@ logging.level.org.springframework.web=DEBUG
 
 - File logging had slight impact on overall performance. 
 
-### Problem
-By default, Logback writes logs **synchronously** — every `logger.info()` call 
+### Logging Problem
+By default, Logback writes logs **synchronously** , every `logger.info()` call 
 blocks the calling worker thread until the entry is flushed to disk. Under 
 concurrent load, this means all 5 worker threads compete for disk access, 
 introducing latency on every client assignment and completion.
 
-### Solution — Async Logging
+### Solution : Async Logging
 Switching to `AsyncAppender` decouples disk writes from worker threads entirely:
 
 
