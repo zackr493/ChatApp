@@ -2,9 +2,9 @@
 
 <configuration>
 
-<!--Rolling file to prevent files getting too large-->
+    <!--Rolling file to prevent files getting too large-->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>archive.log</file>
+        <file>logs/archive.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>archive-%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>30</maxHistory>
