@@ -1,6 +1,6 @@
-# ChatServer
+# ChatServer Concurrency Demo
 
-A concurrent chat server built with Spring Boot that manages client-server communication through a thread pool architecture.
+A concurrent chat server demo built with Spring Boot that manages client-server communication through a thread pool architecture.
 
 ## Prerequisites
 
