@@ -180,6 +180,15 @@ logging.level.org.springframework.web=DEBUG
 
 - File logging had slight impact on overall performance. 
 
+### Problem
+By default, Logback writes logs **synchronously** — every `logger.info()` call 
+blocks the calling worker thread until the entry is flushed to disk. Under 
+concurrent load, this means all 5 worker threads compete for disk access, 
+introducing latency on every client assignment and completion.
+
+### Solution — Async Logging
+Switching to `AsyncAppender` decouples disk writes from worker threads entirely:
+
 
 ## Async Logging vs Sync Logging
 
@@ -193,9 +202,6 @@ logging.level.org.springframework.web=DEBUG
 | Wall Clock Time | 58s* | 231s | 229s |
 | Throughput | ~1.4/s* | ~4.3/s | ~4.4/s |
 
-Synchronous and asynchronous logging performed virtually identically at
-this scale . This is because the bottleneck
-at 1000 clients is likely network I/O and queue throughput, not disk writes.
-
+Asynchronous logging performed better than sync logging . 
 
 
