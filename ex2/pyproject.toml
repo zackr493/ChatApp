@@ -1,0 +1,27 @@
+[project]
+name = "ex2"
+version = "0.1.0"
+description = ""
+authors = [
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pylint (>=4.0.5,<5.0.0)",
+    "pytest (>=9.0.2,<10.0.0)",
+    "pytest-cov (>=7.0.0,<8.0.0)",
+    "black (>=26.3.1,<27.0.0)",
+    "mypy (>=1.19.1,<2.0.0)",
+]
+
+[tool.poetry]
+packages = [{include = "circle", from = "src"}]
+
+[tool.poetry.scripts]
+circle-tool = "circle.main:run_app"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
