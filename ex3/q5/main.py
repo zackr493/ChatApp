@@ -1,8 +1,8 @@
-def add_there(func):
-    return func + " there"
+def apply(func, x):
+    return func(x)
 
-def uppercase(text) :
-    return text.upper()
+def add(text) :
+    return text + text
 
 class String :
     def __init__(self, value):
@@ -15,7 +15,7 @@ class String :
 if __name__ == "__main__"  :
 
     # higher order functions
-    print(add_there(uppercase("hello")))
+    print(apply(add, "test "))
 
     # dunder methods, we override it
     s1 = String("hello")
