@@ -2,15 +2,14 @@ package com.chatapp.chat_app.controller;
 
 
 import com.chatapp.chat_app.dto.ApiResponse;
+import com.chatapp.chat_app.dto.FinishRequest;
 import com.chatapp.chat_app.model.SessionEntity;
 import com.chatapp.chat_app.repository.SessionRepository;
+import com.chatapp.chat_app.service.SessionService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -20,8 +19,20 @@ import java.util.List;
 public class SessionController {
 
     private final SessionRepository sessionRepository;
+    private final SessionService sessionService;
     private static final Logger logger = LoggerFactory.getLogger(SessionController.class);
 
+    @PostMapping("/finish")
+    public ApiResponse<String> finishSession(@RequestBody FinishRequest request) {
+        logger.info("Finish request: sessionId={}, rating={}", request.getSessionId(), request.getRating());
+        try {
+            sessionService.finishSession(request.getSessionId(), request.getRating());
+            return new ApiResponse<>(200, "Session finished", request.getSessionId());
+        } catch (Exception e) {
+            logger.error("Error finishing session: {}", request.getSessionId(), e);
+            return new ApiResponse<>(500, "Internal server error", null);
+        }
+    }
 
     // GET all sessions
     @GetMapping
