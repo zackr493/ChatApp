@@ -9,9 +9,17 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 // we need to override updates to make updating stats threadsafe
 @Repository
-public interface ServerRepository extends JpaRepository<ServerEntity, String> { }
+public interface ServerRepository extends JpaRepository<ServerEntity, String> {
+
+    Optional<ServerEntity> findByHost(String host);
+    List<ServerEntity> findByLastHeartbeatAtBefore(LocalDateTime cutoff);
+
+}
 

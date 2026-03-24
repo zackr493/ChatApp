@@ -31,9 +31,6 @@ public class ServerManager {
     private final SessionRepository sessionRepository;
     private final LostClientRepository lostClientRepository;
 
-    // change in application properties if needed
-    @Value("${chat.max-servers:5}")
-    private int maxServers;
 
 
 
@@ -41,70 +38,39 @@ public class ServerManager {
     private final LinkedBlockingQueue<WaitingClient> waitingQueue = new LinkedBlockingQueue<>();
 
 
-    // maps session id : waitingClient
-    // we need concurrenthm because signalFinish and worker threads will touch this
-    private final ConcurrentHashMap<String, WaitingClient> activeSessions = new ConcurrentHashMap<>();
-
-
-
-    // this will call after bean is constructed
-    @PostConstruct
-    public void startWorkers() {
-
-        // get all server instances from db if exist
-        List<ServerEntity> servers = serverRepository.findAll();
-
-        // Create servers up to max amount of servers automatically ,
-        while (servers.size() < maxServers) {
-            ServerEntity s = buildNewServer(servers.size());
+    public ServerEntity registerServer(String serverName, String host) {
+        // If the same host re-registers (e.g. after a restart), reuse the record
+        Optional<ServerEntity> existing = serverRepository.findByHost(host);
+        if (existing.isPresent()) {
+            ServerEntity s = existing.get();
+            s.setServerName(serverName);
+            s.setCurrClientId(null);
             serverRepository.save(s);
-            servers.add(s);
-            logger.info("Auto-created server: {}", s.getServerName());
+            startWorkerThread(s.getId(), s.getServerName());
+            logger.info("Re-registered server: {} at {}", serverName, host);
+            return s;
         }
 
-        // we spawn thread here for concurrent operations
-        for (ServerEntity server : servers) {
-            startWorkerThread(server.getId(), server.getServerName());
-        }
+        ServerEntity server = ServerEntity.builder()
+                .id(UUID.randomUUID().toString())
+                .serverName(serverName)
+                .host(host)
+                .numClientsDay(0)
+                .numClientsMonth(0)
+                .ratingTotal(0)
+                .ratingCount(0)
+                .build();
 
-        logger.info("ServerManager started with {} worker threads", servers.size());
+        serverRepository.save(server);
+        startWorkerThread(server.getId(), server.getServerName());
+        logger.info("Registered new server: {} at {}", serverName, host);
+        return server;
     }
-
-
 
     public void enqueueClient(String clientId, String sessionId, int timeoutMs) {
         WaitingClient wc = new WaitingClient(clientId, sessionId, timeoutMs);
         waitingQueue.offer(wc);
         logger.info("Client {} enqueued. Queue size now: {}", clientId, waitingQueue.size());
-    }
-
-
-    public void signalFinish(String sessionId, int rating) {
-        // this function releases the thread that is blocked in worker loop
-        WaitingClient wc = activeSessions.get(sessionId);
-        if (wc == null) {
-            logger.warn("signalFinish: no active session found for sessionId={}", sessionId);
-            return;
-        }
-        wc.setRating(rating);
-        // unblocks the worker thread, allowing it to finish
-        wc.getFinishLatch().countDown();
-        logger.info("Finish signal sent for sessionId={}, rating={}", sessionId, rating);
-    }
-
-
-    // adds a new server, creating manually should not be required
-    public ServerEntity createServer() {
-        long existing = serverRepository.count();
-        if (existing >= maxServers) {
-            throw new IllegalStateException("Max server limit of " + maxServers + " already reached");
-        }
-
-        ServerEntity server = buildNewServer((int) existing);
-        serverRepository.save(server);
-        startWorkerThread(server.getId(), server.getServerName());
-        logger.info("New server created and worker started: {}", server.getServerName());
-        return server;
     }
 
     public List<ServerEntity> getAllServers() {
@@ -124,8 +90,6 @@ public class ServerManager {
 
         // this will run as long as the thread is not interrupted
         while (!Thread.currentThread().isInterrupted()) {
-
-
             try {
 
                 // linkedblockingqueue.poll() aims to return a client from the queue
@@ -147,23 +111,8 @@ public class ServerManager {
                     continue;
                 }
 
-                // we add it into in mem active session hm
-                activeSessions.put(client.getSessionId(), client);
-
                 // not expired, we assign the client
                 assignClient(serverId, serverName, client);
-
-
-                // blocks thread
-                // wait for session to be finish through /finish endpoint when user clicks finish, this thread will be released
-                logger.info("[{}] Waiting for client {} to finish...", serverName, client.getClientId());
-                client.getFinishLatch().await();
-
-                // session is completed
-                completeSession(serverId, serverName, client);
-
-                // remove from active sessions
-                activeSessions.remove(client.getSessionId());
 
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -175,6 +124,13 @@ public class ServerManager {
         }
     }
 
+    public void recordHeartbeat(String serverId) {
+        ServerEntity server = serverRepository.findById(serverId)
+                .orElseThrow(() -> new RuntimeException("Server not found: " + serverId));
+        server.setLastHeartbeatAt(LocalDateTime.now());
+        serverRepository.save(server);
+        logger.debug("Heartbeat recorded for server {}", serverId);
+    }
 
     private void assignClient(String serverId, String serverName, WaitingClient client) {
         // this function gets the fresh client object from db and assigns it to server
@@ -193,30 +149,6 @@ public class ServerManager {
         sessionRepository.save(session);
 
         logger.info("[{}] Assigned to client {}, sessionId={}", serverName, client.getClientId(), client.getSessionId());
-    }
-
-    private void completeSession(String serverId, String serverName, WaitingClient client) {
-        // this function handles adding updating stats when a session is completed
-
-        ServerEntity server = serverRepository.findById(serverId)
-                .orElseThrow(() -> new RuntimeException("Server not found: " + serverId));
-
-        // Clear the slot so this worker can accept the next client
-        server.setCurrClientId(null);
-
-        // Update stats
-        server.setNumClientsDay(server.getNumClientsDay() + 1);
-        server.setNumClientsMonth(server.getNumClientsMonth() + 1);
-
-        int rating = client.getRating();
-        if (rating > 0) {
-            server.setRatingTotal(server.getRatingTotal() + rating);
-            server.setRatingCount(server.getRatingCount() + 1);
-        }
-
-        serverRepository.save(server);
-        logger.info("[{}] Session complete. Rating={}. Day={}, Month={}",
-                serverName, rating, server.getNumClientsDay(), server.getNumClientsMonth());
     }
 
     private void markLost(WaitingClient client) {
@@ -247,6 +179,7 @@ public class ServerManager {
         // this allows automatic shutdown without manually stopping every worker thread
         worker.setDaemon(true);
         worker.start();
+        logger.info("Worker thread started for server {}", serverName);
     }
 
     private ServerEntity buildNewServer(int index) {

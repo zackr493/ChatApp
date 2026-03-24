@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 
@@ -27,6 +28,7 @@ public class ServerEntity {
     }
 
     private String serverName;
+    private String host;
 
     private int numClientsDay   = 0;
     private int numClientsMonth = 0;
@@ -34,6 +36,8 @@ public class ServerEntity {
     private int ratingCount     = 0;
 
     private String currClientId;
+
+    private LocalDateTime lastHeartbeatAt;
 
 
     // for optimistic locking , we dont use pessimistic to avoid deadlocks
