@@ -4,5 +4,5 @@ import lombok.Data;
 
 @Data
 public class HeartbeatRequest {
-    private String serverId;
+    private String serverHost;
 }

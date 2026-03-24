@@ -36,11 +36,11 @@ public class ServerController {
 
     // server calls this on startup
     @PostMapping("/register")
-    public ApiResponse<ServerEntity> registerServer(@RequestBody RegisterServerRequest request) {
+    public ApiResponse<RegisterServerResponse> registerServer(@RequestBody RegisterServerRequest request) {
         logger.info("Server registration: name={}, host={}", request.getServerName(), request.getHost());
         try {
-            ServerEntity server = serverManager.registerServer(request.getServerName(), request.getHost());
-            return new ApiResponse<>(200, "Server registered", server);
+            RegisterServerResponse server = serverManager.registerServer(request.getServerName(), request.getHost());
+            return new ApiResponse<RegisterServerResponse>(200, "Server registered", server);
         } catch (Exception e) {
             logger.error("Error registering server", e);
             return new ApiResponse<>(500, "Internal server error", null);
@@ -50,12 +50,12 @@ public class ServerController {
     // server calls this on interval, to record health in db
     @PostMapping("/heartbeat")
     public ApiResponse<String> heartbeat(@RequestBody HeartbeatRequest request) {
-        logger.debug("Heartbeat received: serverId={}", request.getServerId());
+        logger.debug("Heartbeat received: serverhost={}", request.getServerHost());
         try {
-            serverManager.recordHeartbeat(request.getServerId());
-            return new ApiResponse<>(200, "OK", request.getServerId());
+            serverManager.recordHeartbeat(request.getServerHost());
+            return new ApiResponse<>(200, "OK", request.getServerHost());
         } catch (Exception e) {
-            logger.warn("Heartbeat failed for serverId={}: {}", request.getServerId(), e.getMessage());
+            logger.warn("Heartbeat failed for serverHost={}: {}", request.getServerHost(), e.getMessage());
             return new ApiResponse<>(404, "Server not found", null);
         }
     }

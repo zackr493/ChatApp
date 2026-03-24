@@ -1,5 +1,6 @@
 package com.chatapp.chat_app.service;
 
+import com.chatapp.chat_app.dto.RegisterServerResponse;
 import com.chatapp.chat_app.dto.SessionStatus;
 import com.chatapp.chat_app.model.*;
 import com.chatapp.chat_app.repository.ClientRepository;
@@ -7,6 +8,8 @@ import com.chatapp.chat_app.repository.LostClientRepository;
 import com.chatapp.chat_app.repository.ServerRepository;
 import com.chatapp.chat_app.repository.SessionRepository;
 import jakarta.annotation.PostConstruct;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +23,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+
+
 
 @Service
 @RequiredArgsConstructor
@@ -38,9 +43,11 @@ public class ServerManager {
     private final LinkedBlockingQueue<WaitingClient> waitingQueue = new LinkedBlockingQueue<>();
 
 
-    public ServerEntity registerServer(String serverName, String host) {
+    public RegisterServerResponse registerServer(String serverName, String host) {
         // If the same host re-registers (e.g. after a restart), reuse the record
+        logger.info("REGISTER SERVER CALLED: {} ", serverName, host);
         Optional<ServerEntity> existing = serverRepository.findByHost(host);
+        logger.info("EXISTING: {} ", existing);
         if (existing.isPresent()) {
             ServerEntity s = existing.get();
             s.setServerName(serverName);
@@ -48,7 +55,12 @@ public class ServerManager {
             serverRepository.save(s);
             startWorkerThread(s.getId(), s.getServerName());
             logger.info("Re-registered server: {} at {}", serverName, host);
-            return s;
+            return new RegisterServerResponse(
+                    "ALREADY REGISTERED",
+                    "Server already exists at host: " + host,
+                    null,
+                    existing.get()
+            );
         }
 
         ServerEntity server = ServerEntity.builder()
@@ -64,7 +76,12 @@ public class ServerManager {
         serverRepository.save(server);
         startWorkerThread(server.getId(), server.getServerName());
         logger.info("Registered new server: {} at {}", serverName, host);
-        return server;
+        return new RegisterServerResponse(
+                "REGISTERED",
+                "Server registered successfully",
+                server.getId(),
+                server
+        );
     }
 
     public void enqueueClient(String clientId, String sessionId, int timeoutMs) {
@@ -124,12 +141,12 @@ public class ServerManager {
         }
     }
 
-    public void recordHeartbeat(String serverId) {
-        ServerEntity server = serverRepository.findById(serverId)
-                .orElseThrow(() -> new RuntimeException("Server not found: " + serverId));
+    public void recordHeartbeat(String serverHost) {
+        ServerEntity server = serverRepository.findByHost(serverHost)
+                .orElseThrow(() -> new RuntimeException("Server not found: " + serverHost));
         server.setLastHeartbeatAt(LocalDateTime.now());
         serverRepository.save(server);
-        logger.debug("Heartbeat recorded for server {}", serverId);
+        logger.debug("Heartbeat recorded for server {}", serverHost);
     }
 
     private void assignClient(String serverId, String serverName, WaitingClient client) {
