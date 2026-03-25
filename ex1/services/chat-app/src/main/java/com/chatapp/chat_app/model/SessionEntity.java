@@ -30,6 +30,7 @@ public class SessionEntity {
     }
 
     @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(20)")
     private SessionStatus status;
 
 
