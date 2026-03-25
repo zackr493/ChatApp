@@ -34,6 +34,7 @@ public class MessageEntity {
     private String content;
 
     @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(20)")
     private MessageRole role;
 
     private LocalDateTime sentAt;

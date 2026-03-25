@@ -7,6 +7,8 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
-    List<MessageEntity> findBySessionIdOrderBySentAt(String sessionId);
+public interface MessageRepository extends JpaRepository<MessageEntity, String> {
+    List<MessageEntity> findBySessionIdOrderBySentAtAsc(String sessionId);
+
+    void deleteBySessionId(String sessionId);
 }
