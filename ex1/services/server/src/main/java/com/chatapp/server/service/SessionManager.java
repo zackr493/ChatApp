@@ -31,7 +31,7 @@ public class SessionManager {
 
     // Reserve a thread slot for this session
     // Returns true if slot was available, false if server is full
-    public boolean assignSession(String sessionId) {
+    public synchronized boolean assignSession(String sessionId) {
         if (activeSessions.containsKey(sessionId)) {
             logger.warn("Session already assigned: {}", sessionId);
             return false;

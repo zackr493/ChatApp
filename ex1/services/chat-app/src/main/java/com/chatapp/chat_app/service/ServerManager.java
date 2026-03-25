@@ -49,15 +49,15 @@ public class ServerManager {
     }
 
     public void signalNextClient() {
-        serverCapacitySemaphore.release();
         WaitingClient next = waitingQueue.poll();
         if (next != null) {
-            // Reacquire permit for the next client
-            if (serverCapacitySemaphore.tryAcquire()) {
-                next.getReadyLatch().countDown();
-                logger.info("Signalled next client: {}", next.getClientId());
-            }
+
+            // pass permit directly to next client, we dont release reacquire due to race condition
+            next.getReadyLatch().countDown();
+            logger.info("Signalled next client: {}", next.getClientId());
         } else {
+            // when nobody is waiting, we release permit
+            serverCapacitySemaphore.release();
             logger.info("No clients in queue — slot released");
         }
     }

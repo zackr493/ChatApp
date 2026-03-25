@@ -28,7 +28,8 @@ public class SessionService {
     private final ServerManager serverManager;      // needed to signal the latch
     private final RestTemplate restTemplate;
 
-
+    // technically not possible for two threads to finish one session, but
+    @Transactional
     public void finishSession(String sessionId, int rating) {
         logger.info("Finishing session: sessionId={}, rating={}", sessionId, rating);
 
@@ -58,21 +59,36 @@ public class SessionService {
         logger.info("Session {} finished successfully", sessionId);
     }
 
+
     private void completeSession(String serverId, String serverName, int rating) {
-        ServerEntity server = serverRepository.findById(serverId)
-                .orElseThrow(() -> new RuntimeException("Server not found: " + serverId));
 
-        server.setNumClientsDay(server.getNumClientsDay() + 1);
-        server.setNumClientsMonth(server.getNumClientsMonth() + 1);
+        // handle retry when optimisticlocking  exception is thrown by jpa @version
+        int maxRetries = 3;
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                ServerEntity server = serverRepository.findById(serverId)
+                        .orElseThrow(() -> new RuntimeException("Server not found: " + serverId));
 
-        if (rating > 0) {
-            server.setRatingTotal(server.getRatingTotal() + rating);
-            server.setRatingCount(server.getRatingCount() + 1);
+                server.setNumClientsDay(server.getNumClientsDay() + 1);
+                server.setNumClientsMonth(server.getNumClientsMonth() + 1);
+
+                if (rating > 0) {
+                    server.setRatingTotal(server.getRatingTotal() + rating);
+                    server.setRatingCount(server.getRatingCount() + 1);
+                }
+
+                serverRepository.save(server);
+                logger.info("[{}] Session complete. rating={}, day={}, month={}",
+                        serverName, rating, server.getNumClientsDay(), server.getNumClientsMonth());
+                return;
+
+            } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
+                logger.warn("Optimistic lock conflict on attempt {}/{} for server {}", attempt, maxRetries, serverId);
+                if (attempt == maxRetries) {
+                    throw new RuntimeException("Failed to update server stats after " + maxRetries + " retries");
+                }
+            }
         }
-
-        serverRepository.save(server);
-        logger.info("[{}] Session complete. rating={}, day={}, month={}",
-                serverName, rating, server.getNumClientsDay(), server.getNumClientsMonth());
     }
 
     private void notifyChatServer(String serverHost, String sessionId) {
