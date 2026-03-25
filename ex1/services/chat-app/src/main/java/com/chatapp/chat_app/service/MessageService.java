@@ -6,6 +6,7 @@ import com.chatapp.chat_app.dto.SessionStatus;
 import com.chatapp.chat_app.model.*;
 import com.chatapp.chat_app.repository.ClientRepository;
 import com.chatapp.chat_app.repository.MessageRepository;
+import com.chatapp.chat_app.repository.ServerRepository;
 import com.chatapp.chat_app.repository.SessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -29,6 +30,8 @@ public class MessageService {
     private final ClientRepository  clientRepository;
     private final SessionRepository sessionRepository;
     private final MessageRepository messageRepository;
+    private final ServerRepository serverRepository;
+
     private final ServerManager     serverManager;
     private final RestTemplate      restTemplate;
 
@@ -75,8 +78,19 @@ public class MessageService {
             throw new RuntimeException("Request timed out after 300s");
         }
 
+        // assign server to session
+        String serverHost = assignServer(session.getId(), clientId);
+
+        // set server entity
+        ServerEntity server = serverRepository.findByHost(serverHost)
+                .orElseThrow(() -> new RuntimeException("Server not found for host: " + serverHost));
+
+        session.setServerEntity(server);
         session.setStatus(SessionStatus.ASSIGNED);
+
         sessionRepository.save(session);
+
+        logger.info("Session assigned server {}", session.getId(), serverHost);
 
         return forwardAndSave(session, clientId, content);
     }
@@ -102,23 +116,12 @@ public class MessageService {
             throw new RuntimeException("Session does not belong to client: " + clientId);
         }
 
-        // enqueue and block message , until signal
-        WaitingClient wc = serverManager.enqueueClient(clientId, sessionId);
-        boolean ready = wc.getReadyLatch().await(300, TimeUnit.SECONDS);
 
-        if (!ready) {
-            serverManager.markLost(wc);
-            throw new RuntimeException("No server available — request timed out");
-        }
 
         return forwardAndSave(session, clientId, content);
     }
 
     private SendMessageResponse forwardAndSave(SessionEntity session, String clientId, String content) {
-        // this function
-        // 1. saves to message repository
-        // 2. forwards message to nginx for server routing
-
         // Persist client message
         messageRepository.save(MessageEntity.builder()
                 .id(UUID.randomUUID().toString())
@@ -129,50 +132,25 @@ public class MessageService {
                 .sentAt(LocalDateTime.now())
                 .build());
 
-        // Forward to NGINX with recursive retry on 502 , (TO_CHANGE)
-        String reply = null;
-        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-            try {
+        // bypass nginx forwards request to locked server
+        String serverUrl = session.getServerEntity().getHost() + "/server/message";
+        logger.info("Forwarding message directly to server: {}", serverUrl);
 
-                // this throws 502 when server is overloaded
-                Map<String, Object> response = restTemplate.postForObject(
-                        nginxUrl + "/server/message",
-                        Map.of(
-                                "sessionId", session.getId(),
-                                "clientId",  clientId,
-                                "content",   content
-                        ),
-                        Map.class
-                );
-                if (response == null) {
-                    reply = "No response";
-                }
-                else {
-                    reply = (String) response.get("data") ;
-                }
+        Map<String, Object> response = restTemplate.postForObject(
+                serverUrl,
+                Map.of(
+                        "sessionId", session.getId(),
+                        "clientId",  clientId,
+                        "content",   content
+                ),
+                Map.class
+        );
 
-                // when success, signal next item
-                serverManager.signalNextClient();
+        Map<String, Object> data = response != null ? (Map<String, Object>) response.get("data") : null;
+        String reply = data != null ? (String) data.get("reply") : "No response";
 
-                break;
 
-            } catch (HttpServerErrorException e) {
-                logger.warn("NGINX error {} on attempt {}/{}", e.getStatusCode(), attempt, MAX_RETRIES);
-                if (attempt == MAX_RETRIES) {
-                    throw new RuntimeException("All chat servers busy after " + MAX_RETRIES + " retries");
-                }
-
-                try {
-                    // wait awhile before retry
-                    Thread.sleep((long) RETRY_WAIT_MS * attempt);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    throw new RuntimeException("Interrupted during retry");
-                }
-            }
-        }
-
-        // persist mock response from server
+        // Persist assistant reply
         messageRepository.save(MessageEntity.builder()
                 .id(UUID.randomUUID().toString())
                 .sessionId(session.getId())
@@ -182,7 +160,36 @@ public class MessageService {
                 .sentAt(LocalDateTime.now())
                 .build());
 
-        logger.info("Message forwarded and saved for sessionId={}", session.getId());
+        logger.info("Message saved for sessionId={}", session.getId());
         return new SendMessageResponse(session.getId(), reply);
+    }
+    private String assignServer(String sessionId, String clientId) {
+        // sends a request to server container , to "book" a thread , only first request needs to go through this
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                Map<String, Object> response = restTemplate.postForObject(
+                        nginxUrl + "/server/sessions/assign",
+                        Map.of("sessionId", sessionId, "clientId", clientId),
+                        Map.class
+                );
+                if (response != null && response.get("data") != null) {
+                    return (String) response.get("data");
+                }
+                throw new RuntimeException("No server host returned from assign");
+
+            } catch (HttpServerErrorException e) {
+                logger.warn("Assign attempt failed: {}/{}, e: {}", attempt, MAX_RETRIES, e.getStatusCode());
+                if (attempt == MAX_RETRIES) {
+                    throw new RuntimeException("All servers at capacity after " + MAX_RETRIES + " retries");
+                }
+                try {
+                    Thread.sleep((long) RETRY_WAIT_MS * attempt);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Interrupted during assign retry");
+                }
+            }
+        }
+        throw new RuntimeException("Failed to assign server");
     }
 }

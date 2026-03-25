@@ -7,6 +7,7 @@ public class Requests {
     public static class AssignSessionRequest {
         private String sessionId;
         private String clientId;
+
     }
 
     @Data
@@ -19,6 +20,5 @@ public class Requests {
     @Data
     public static class FinishSessionRequest {
         private String sessionId;
-        private int rating;
     }
 }

@@ -11,7 +11,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +25,9 @@ public class SessionService {
     private final SessionRepository sessionRepository;
     private final ServerRepository serverRepository;
 
-    private final ServerManager     serverManager;      // needed to signal the latch
+    private final ServerManager serverManager;      // needed to signal the latch
+    private final RestTemplate restTemplate;
+
 
     public void finishSession(String sessionId, int rating) {
         logger.info("Finishing session: sessionId={}, rating={}", sessionId, rating);
@@ -45,6 +50,7 @@ public class SessionService {
         ServerEntity server = session.getServerEntity();
         if (server != null) {
             completeSession(server.getId(), server.getServerName(), rating);
+            notifyChatServer(server.getHost(), sessionId);
         } else {
             logger.warn("Session {} had no assigned server — skipping completeSession", sessionId);
         }
@@ -67,5 +73,22 @@ public class SessionService {
         serverRepository.save(server);
         logger.info("[{}] Session complete. rating={}, day={}, month={}",
                 serverName, rating, server.getNumClientsDay(), server.getNumClientsMonth());
+    }
+
+    private void notifyChatServer(String serverHost, String sessionId) {
+        try {
+            restTemplate.postForObject(
+                    serverHost + "/server/sessions/finish",
+                    Map.of("sessionId", sessionId),
+                    Void.class
+            );
+            logger.info("Notified chat server {} to release sessionId={}", serverHost, sessionId);
+            serverManager.signalNextClient();
+
+        } catch (Exception e) {
+            // Non-fatal — session is already marked finished in DB
+            logger.error("Failed to notify chat server {} of finish: {}", serverHost, e.getMessage());
+            throw new RuntimeException("Failed to release server slot , please try again later") ;
+        }
     }
 }

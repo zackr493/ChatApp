@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
-
+import java.util.concurrent.Semaphore;
 
 
 @Service
@@ -27,9 +27,7 @@ public class ServerManager {
     private final ServerRepository serverRepository;
     private final SessionRepository sessionRepository;
     private final LostClientRepository lostClientRepository;
-
-
-
+    private final Semaphore serverCapacitySemaphore;
 
     // thread safe , blocks caller until space is available or an item arrives
     private final LinkedBlockingQueue<WaitingClient> waitingQueue = new LinkedBlockingQueue<>();
@@ -39,17 +37,28 @@ public class ServerManager {
         waitingQueue.offer(wc);
         logger.info("Client {} enqueued. Queue size: {}", clientId, waitingQueue.size());
 
-        // queue only holds back when nginx returns 502
-        wc.getReadyLatch().countDown();
+        if (serverCapacitySemaphore.tryAcquire()) {
+            wc.getReadyLatch().countDown();
+            logger.info("Slot available — client {} unblocked immediately", clientId);
+        }
+        else {
+            logger.info("No slots available — client {} queued", clientId);
+        }
 
         return wc;
     }
 
     public void signalNextClient() {
+        serverCapacitySemaphore.release();
         WaitingClient next = waitingQueue.poll();
         if (next != null) {
-            next.getReadyLatch().countDown();
-            logger.info("Signalled next client: {}", next.getClientId());
+            // Reacquire permit for the next client
+            if (serverCapacitySemaphore.tryAcquire()) {
+                next.getReadyLatch().countDown();
+                logger.info("Signalled next client: {}", next.getClientId());
+            }
+        } else {
+            logger.info("No clients in queue — slot released");
         }
     }
 
@@ -113,22 +122,21 @@ public class ServerManager {
 
 
     public void markLost(WaitingClient client) {
-        // this function marks session as lost and creates a lost client instance in db
-
         sessionRepository.findById(client.getSessionId()).ifPresent(session -> {
             session.setStatus(SessionStatus.LOST);
             session.setEndTime(LocalDateTime.now());
             sessionRepository.save(session);
         });
 
-        // Persist lost client record
         LostClientEntity lost = LostClientEntity.builder()
                 .clientId(client.getClientId())
                 .createdAt(LocalDateTime.now())
                 .build();
         lostClientRepository.save(lost);
 
-        logger.warn("Client {} marked as LOST (sessionId={})", client.getClientId(), client.getSessionId());
+
+        logger.warn("Client {} marked as LOST (sessionId={})",
+                client.getClientId(), client.getSessionId());
     }
 
 
