@@ -55,7 +55,6 @@ public class SessionService {
         ServerEntity server = serverRepository.findById(serverId)
                 .orElseThrow(() -> new RuntimeException("Server not found: " + serverId));
 
-        server.setCurrClientId(null);
         server.setNumClientsDay(server.getNumClientsDay() + 1);
         server.setNumClientsMonth(server.getNumClientsMonth() + 1);
 
