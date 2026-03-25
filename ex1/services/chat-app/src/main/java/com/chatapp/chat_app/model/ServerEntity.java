@@ -35,7 +35,6 @@ public class ServerEntity {
     private int ratingTotal     = 0;
     private int ratingCount     = 0;
 
-    private String currClientId;
 
     private LocalDateTime lastHeartbeatAt;
 

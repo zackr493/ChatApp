@@ -4,8 +4,13 @@ import com.chatapp.chat_app.dto.*;
 import com.chatapp.chat_app.model.ClientEntity;
 import com.chatapp.chat_app.model.ServerEntity;
 import com.chatapp.chat_app.model.SessionEntity;
+import com.chatapp.chat_app.model.MessageEntity;
+
+
+
 import com.chatapp.chat_app.repository.ClientRepository;
 import com.chatapp.chat_app.repository.SessionRepository;
+import com.chatapp.chat_app.service.MessageService;
 import com.chatapp.chat_app.service.ServerManager;
 import com.chatapp.chat_app.service.SessionService;
 
@@ -14,6 +19,7 @@ import com.chatapp.chat_app.dto.RegisterServerRequest;
 import com.chatapp.chat_app.dto.HeartbeatRequest;
 
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +39,7 @@ public class ServerController {
     private final SessionRepository sessionRepository;
     private final ServerManager     serverManager;
     private final SessionService    sessionService;
+    private final MessageService messageService;
 
     // server calls this on startup
     @PostMapping("/register")
@@ -62,42 +69,6 @@ public class ServerController {
 
 
     //
-    @PostMapping("/join")
-    public ApiResponse<String> joinServer(@RequestBody JoinRequest request) {
-        logger.info("Join request: clientId={}", request.getClientId());
-
-        if (request.getClientId() == null || request.getClientId().isBlank()) {
-            return new ApiResponse<>(400, "Client ID cannot be empty", null);
-        }
-
-        try {
-            ClientEntity client = clientRepository.findById(request.getClientId())
-                    .orElseThrow(() -> new RuntimeException("Client does not exist: " + request.getClientId()));
-
-            SessionEntity session = SessionEntity.builder()
-                    .id(java.util.UUID.randomUUID().toString())
-                    .clientEntity(client)
-                    .startTime(LocalDateTime.now())
-                    .status(SessionStatus.WAITING)
-                    .build();
-            session = sessionRepository.save(session);
-
-            int timeoutMs = (request.getTimeoutMs() != null) ? request.getTimeoutMs() : 300_000;
-            serverManager.enqueueClient(client.getId(), session.getId(), timeoutMs);
-
-            logger.info("Client {} enqueued, sessionId={}", client.getId(), session.getId());
-            return new ApiResponse<>(200,
-                    "Joined queue. Poll GET /sessions/" + session.getId() + " for status.",
-                    session.getId());
-
-        } catch (RuntimeException e) {
-            logger.warn("Join failed: {}", e.getMessage());
-            return new ApiResponse<>(400, e.getMessage(), null);
-        } catch (Exception e) {
-            logger.error("Unexpected error on join", e);
-            return new ApiResponse<>(500, "Internal server error", null);
-        }
-    }
 
 
     @GetMapping
