@@ -27,7 +27,7 @@ public class ChatServerController {
         logger.info("Message received: sessionId={}, clientId={}", request.getSessionId(), request.getClientId());
         try {
             String reply = chatService.handleMessage(request.getSessionId(), request.getClientId(), request.getContent());
-            return new ApiResponse<>(200, "OK", reply);
+            return new ApiResponse<String>(200, "OK", reply);
         } catch (Exception e) {
             logger.error("Error handling message for session {}", request.getSessionId(), e);
             return new ApiResponse<>(500, "Internal server error", null);

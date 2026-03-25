@@ -148,7 +148,7 @@ public class MessageService {
                     reply = "No response";
                 }
                 else {
-                    response.get("data") ;
+                    reply = (String) response.get("data") ;
                 }
 
                 // when success, signal next item

@@ -31,8 +31,9 @@ public class SessionService {
                 .orElseThrow(() -> new RuntimeException("Session not found: " + sessionId));
 
         if (session.getStatus() == SessionStatus.FINISHED || session.getStatus() == SessionStatus.LOST) {
-            logger.warn("Session {} is already in terminal state: {}", sessionId, session.getStatus());
-            return;
+            logger.warn("Session {} is already in terminal: {}", sessionId, session.getStatus());
+
+            throw new RuntimeException("Session " + sessionId + " is already terminated");
         }
 
         session.setEndTime(LocalDateTime.now());
