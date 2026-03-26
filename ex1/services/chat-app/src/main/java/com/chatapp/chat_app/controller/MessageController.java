@@ -116,16 +116,16 @@ public class MessageController {
         }
     }
 
-    // delete all messages for a session
-    @DeleteMapping("/session/{sessionId}")
-    public ApiResponse<String> deleteMessagesBySession(@PathVariable String sessionId) {
-        logger.info("Deleting all messages for sessionId={}", sessionId);
-        try {
-            messageRepository.deleteBySessionId(sessionId);
-            return new ApiResponse<>(200, "Messages deleted for session", sessionId);
-        } catch (Exception e) {
-            logger.error("Error deleting messages for sessionId={}", sessionId, e);
-            return new ApiResponse<>(500, "Internal server error", null);
-        }
-    }
+//    // delete all messages for a session
+//    @DeleteMapping("/session/{sessionId}")
+//    public ApiResponse<String> deleteMessagesBySession(@PathVariable String sessionId) {
+//        logger.info("Deleting all messages for sessionId={}", sessionId);
+//        try {
+//            messageRepository.deleteBySessionId(sessionId);
+//            return new ApiResponse<>(200, "Messages deleted for session", sessionId);
+//        } catch (Exception e) {
+//            logger.error("Error deleting messages for sessionId={}", sessionId, e);
+//            return new ApiResponse<>(500, "Internal server error", null);
+//        }
+//    }
 }

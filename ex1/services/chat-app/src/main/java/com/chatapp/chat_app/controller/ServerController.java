@@ -55,18 +55,18 @@ public class ServerController {
         }
     }
 
-    // server calls this on interval, to record health in db
-    @PostMapping("/heartbeat")
-    public ApiResponse<String> heartbeat(@RequestBody HeartbeatRequest request) {
-        logger.debug("Heartbeat received: serverhost={}", request.getServerHost());
-        try {
-            serverManager.recordHeartbeat(request.getServerHost());
-            return new ApiResponse<>(200, "OK", request.getServerHost());
-        } catch (Exception e) {
-            logger.warn("Heartbeat failed for serverHost={}: {}", request.getServerHost(), e.getMessage());
-            return new ApiResponse<>(404, "Server not found", null);
-        }
-    }
+//    // server calls this on interval, to record health in db
+//    @PostMapping("/heartbeat")
+//    public ApiResponse<String> heartbeat(@RequestBody HeartbeatRequest request) {
+//        logger.debug("Heartbeat received: serverhost={}", request.getServerHost());
+//        try {
+//            serverManager.recordHeartbeat(request.getServerHost());
+//            return new ApiResponse<>(200, "OK", request.getServerHost());
+//        } catch (Exception e) {
+//            logger.warn("Heartbeat failed for serverHost={}: {}", request.getServerHost(), e.getMessage());
+//            return new ApiResponse<>(404, "Server not found", null);
+//        }
+//    }
 
 
     //

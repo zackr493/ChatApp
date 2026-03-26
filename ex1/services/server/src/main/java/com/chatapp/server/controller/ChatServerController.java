@@ -1,13 +1,18 @@
 package com.chatapp.server.controller;
 
-
+// Config
 import com.chatapp.server.config.ServerConfig;
+
+// Dtos
 import com.chatapp.server.dto.ApiResponse;
 import com.chatapp.server.dto.MessageResponse;
 import com.chatapp.server.dto.Requests.*;
+
+// Services
 import com.chatapp.server.service.ChatService;
 import com.chatapp.server.service.HeartbeatService;
 import com.chatapp.server.service.SessionManager;
+
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

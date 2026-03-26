@@ -1,6 +1,8 @@
 package com.chatapp.server.service;
 
+// Config
 import com.chatapp.server.config.ServerConfig;
+
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -46,24 +48,24 @@ public class HeartbeatService {
         }
     }
 
-    // Sends heartbeat to main app every 30 seconds
-    @Scheduled(fixedDelayString = "${chat.heartbeat-interval-ms:30000}")
-    public void sendHeartbeat() {
-        if (serverHost == null) {
-            logger.warn("Heartbeat skipped — not registered yet");
-            return;
-        }
-        try {
-            restTemplate.postForObject(
-                    serverConfig.getMainAppUrl() + "/servers/heartbeat",
-                    Map.of("serverHost", serverHost),
-                    Void.class
-            );
-            logger.debug("Heartbeat sent for host={}", serverHost);
-        } catch (Exception e) {
-            logger.warn("Heartbeat failed: {}", e.getMessage());
-        }
-    }
+//    // Sends heartbeat to main app every 30 seconds
+//    @Scheduled(fixedDelayString = "${chat.heartbeat-interval-ms:30000}")
+//    public void sendHeartbeat() {
+//        if (serverHost == null) {
+//            logger.warn("Heartbeat skipped — not registered yet");
+//            return;
+//        }
+//        try {
+//            restTemplate.postForObject(
+//                    serverConfig.getMainAppUrl() + "/servers/heartbeat",
+//                    Map.of("serverHost", serverHost),
+//                    Void.class
+//            );
+//            logger.debug("Heartbeat sent for host={}", serverHost);
+//        } catch (Exception e) {
+//            logger.warn("Heartbeat failed: {}", e.getMessage());
+//        }
+//    }
 
     public String getServerHost() {
         return serverHost;

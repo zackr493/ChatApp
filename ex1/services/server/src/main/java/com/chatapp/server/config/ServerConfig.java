@@ -12,5 +12,5 @@ public class ServerConfig {
     private String serverName;
     private String serverHost;
     private String mainAppUrl;
-    private int maxSessions = 200; // 10 for limit testing
+    private int maxSessions = 200;
 }

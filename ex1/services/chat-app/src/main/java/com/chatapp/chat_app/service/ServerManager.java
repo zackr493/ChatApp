@@ -131,13 +131,13 @@ public class ServerManager {
     }
 
 
-    public void recordHeartbeat(String serverHost) {
-        ServerEntity server = serverRepository.findByHost(serverHost)
-                .orElseThrow(() -> new RuntimeException("Server not found: " + serverHost));
-        server.setLastHeartbeatAt(LocalDateTime.now());
-        serverRepository.save(server);
-        logger.debug("Heartbeat recorded for server {}", serverHost);
-    }
+//    public void recordHeartbeat(String serverHost) {
+//        ServerEntity server = serverRepository.findByHost(serverHost)
+//                .orElseThrow(() -> new RuntimeException("Server not found: " + serverHost));
+//        server.setLastHeartbeatAt(LocalDateTime.now());
+//        serverRepository.save(server);
+//        logger.debug("Heartbeat recorded for server {}", serverHost);
+//    }
 
 
 
