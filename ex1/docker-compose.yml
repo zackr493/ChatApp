@@ -13,11 +13,14 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+
 
 
   chat-server-1:
@@ -28,8 +31,12 @@ services:
       CHAT_SERVER_NAME: chat-server-1
       CHAT_SERVER_HOST: http://chat-server-1:8081
       CHAT_MAIN_APP_URL: http://main-app:8080
+      CHAT_MAX_SESSIONS: 200
+      SERVER_TOMCAT_THREADS_MAX: 500
     expose:
       - "8081"
+    ports:
+      - "8081:8081"
     depends_on:
       main-app:
         condition: service_healthy
@@ -42,8 +49,12 @@ services:
       CHAT_SERVER_NAME: chat-server-2
       CHAT_SERVER_HOST: http://chat-server-2:8081
       CHAT_MAIN_APP_URL: http://main-app:8080
+      CHAT_MAX_SESSIONS: 200
+      SERVER_TOMCAT_THREADS_MAX: 500
     expose:
       - "8081"
+    ports:
+      - "8082:8081"
     depends_on:
       main-app:
         condition: service_healthy
@@ -56,14 +67,15 @@ services:
       CHAT_SERVER_NAME: chat-server-3
       CHAT_SERVER_HOST: http://chat-server-3:8081
       CHAT_MAIN_APP_URL: http://main-app:8080
+      CHAT_MAX_SESSIONS: 200
+      SERVER_TOMCAT_THREADS_MAX: 500
+    expose:
+      - "8081"
+    ports:
+      - "8083:8081"
     depends_on:
       main-app:
         condition: service_healthy
-
-
-    expose:
-      - "8081"
-
 
   nginx:
     image: nginx:alpine
@@ -94,6 +106,18 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+
+      SERVER_TOMCAT_THREADS_MAX: 1000
+      SERVER_TOMCAT_ACCEPT_COUNT: 1000
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 50
+      SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: 100000
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 10
+
+      SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_BATCH_SIZE: 20
+      SPRING_JPA_PROPERTIES_HIBERNATE_ORDER_INSERTS: true
+      SPRING_JPA_PROPERTIES_HIBERNATE_ORDER_UPDATES: true
+
+      CHAT_TOTAL_CAPACITY: 600
 
       CHAT_NGINX_URL: http://nginx:8090
     depends_on:
