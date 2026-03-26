@@ -1,15 +1,16 @@
 package com.chatapp.chat_app.controller;
 
-import com.chatapp.chat_app.dto.*;
-import com.chatapp.chat_app.model.ClientEntity;
+
+// Entities
 import com.chatapp.chat_app.model.ServerEntity;
-import com.chatapp.chat_app.model.SessionEntity;
-import com.chatapp.chat_app.model.MessageEntity;
 
 
 
+// Repository
 import com.chatapp.chat_app.repository.ClientRepository;
 import com.chatapp.chat_app.repository.SessionRepository;
+
+// Services
 import com.chatapp.chat_app.service.MessageService;
 import com.chatapp.chat_app.service.ServerManager;
 import com.chatapp.chat_app.service.SessionService;
@@ -17,14 +18,14 @@ import com.chatapp.chat_app.service.SessionService;
 // DTOs
 import com.chatapp.chat_app.dto.RegisterServerRequest;
 import com.chatapp.chat_app.dto.HeartbeatRequest;
+import com.chatapp.chat_app.dto.ApiResponse;
+import com.chatapp.chat_app.dto.RegisterServerResponse;
 
 import lombok.RequiredArgsConstructor;
-import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 

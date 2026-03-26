@@ -4,7 +4,7 @@ import com.chatapp.chat_app.dto.ApiResponse;
 import com.chatapp.chat_app.model.ClientEntity;
 import com.chatapp.chat_app.dto.ClientRequest;
 import com.chatapp.chat_app.service.ClientService;
-import com.chatapp.chat_app.service.ServerManager;
+
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

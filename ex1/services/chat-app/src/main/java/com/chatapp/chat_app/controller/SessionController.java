@@ -1,11 +1,18 @@
 package com.chatapp.chat_app.controller;
 
-
+// Dtos
 import com.chatapp.chat_app.dto.ApiResponse;
 import com.chatapp.chat_app.dto.FinishRequest;
+
+// Entities
 import com.chatapp.chat_app.model.SessionEntity;
+
+// Repository
 import com.chatapp.chat_app.repository.SessionRepository;
+
+// Services
 import com.chatapp.chat_app.service.SessionService;
+
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

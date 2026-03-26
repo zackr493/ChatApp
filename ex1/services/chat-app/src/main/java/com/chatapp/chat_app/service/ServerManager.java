@@ -1,11 +1,17 @@
 package com.chatapp.chat_app.service;
 
+// Dtos
 import com.chatapp.chat_app.dto.RegisterServerResponse;
 import com.chatapp.chat_app.dto.SessionStatus;
+
+// Entities
 import com.chatapp.chat_app.model.*;
+
+// Repositories
 import com.chatapp.chat_app.repository.LostClientRepository;
 import com.chatapp.chat_app.repository.ServerRepository;
 import com.chatapp.chat_app.repository.SessionRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,22 +39,27 @@ public class ServerManager {
     private final LinkedBlockingQueue<WaitingClient> waitingQueue = new LinkedBlockingQueue<>();
 
     public WaitingClient enqueueClient(String clientId, String sessionId) {
+
         WaitingClient wc = new WaitingClient(clientId, sessionId);
+
+        // offer inserts at tail
         waitingQueue.offer(wc);
+
         logger.info("Client {} enqueued. Queue size: {}", clientId, waitingQueue.size());
 
         if (serverCapacitySemaphore.tryAcquire()) {
+            // case when requests just come in , and servers are all idle
             wc.getReadyLatch().countDown();
-            logger.info("Slot available — client {} unblocked immediately", clientId);
+            logger.info("Slot available, unblocked: client {}", clientId);
         }
         else {
-            logger.info("No slots available — client {} queued", clientId);
+            logger.info("No slots available, queued: client {}", clientId);
         }
 
         return wc;
     }
 
-    // public method to release
+    // public method to release, this is released during error handling / fail to acquire server
     public void releaseSemaphore() {
         serverCapacitySemaphore.release();
         logger.info("Semaphore released manually. Available permits: {}",
@@ -59,7 +70,7 @@ public class ServerManager {
         WaitingClient next = waitingQueue.poll();
         if (next != null) {
 
-            // pass permit directly to next client, we dont release reacquire due to race condition
+            // pass permit directly to next client if queue not empty, we dont release and reacquire due to race condition
             next.getReadyLatch().countDown();
             logger.info("Signalled next client: {}", next.getClientId());
         } else {
@@ -79,10 +90,12 @@ public class ServerManager {
         return serverRepository.findById(id);
     }
 
+    // function called on startup , to register servers into db
     public RegisterServerResponse registerServer(String serverName, String host) {
         logger.info("REGISTER SERVER CALLED: name={}, host={}", serverName, host);
         Optional<ServerEntity> existing = serverRepository.findByHost(host);
         logger.info("EXISTING: {} ", existing);
+
         if (existing.isPresent()) {
             ServerEntity s = existing.get();
             s.setServerName(serverName);

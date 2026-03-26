@@ -1,11 +1,12 @@
 package com.chatapp.chat_app.service;
 
+// entities
 import com.chatapp.chat_app.model.ClientEntity;
-import com.chatapp.chat_app.model.SessionEntity;
+
+// repositories
 import com.chatapp.chat_app.repository.ClientRepository;
-import com.chatapp.chat_app.repository.SessionRepository;
+
 import lombok.RequiredArgsConstructor;
-import org.hibernate.Session;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

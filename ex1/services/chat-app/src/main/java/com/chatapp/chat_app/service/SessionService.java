@@ -1,11 +1,17 @@
 package com.chatapp.chat_app.service;
 
-import com.chatapp.chat_app.dto.SessionStatus;
+
+// Entities
 import com.chatapp.chat_app.model.ServerEntity;
 import com.chatapp.chat_app.model.SessionEntity;
-import com.chatapp.chat_app.model.WaitingClient;
+
+// Dtos
+import com.chatapp.chat_app.dto.SessionStatus;
+
+// Repositories
 import com.chatapp.chat_app.repository.ServerRepository;
 import com.chatapp.chat_app.repository.SessionRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

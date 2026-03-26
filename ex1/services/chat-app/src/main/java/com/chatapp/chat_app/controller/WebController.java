@@ -1,12 +1,16 @@
+
+// Controllers
 package com.chatapp.chat_app.controller;
 
-import com.chatapp.chat_app.model.ServerEntity;
+// Repositories
 import com.chatapp.chat_app.repository.LostClientRepository;
 import com.chatapp.chat_app.repository.SessionRepository;
+
+// Services
 import com.chatapp.chat_app.service.ServerManager;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.List;

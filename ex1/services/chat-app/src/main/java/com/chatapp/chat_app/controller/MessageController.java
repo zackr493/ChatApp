@@ -1,13 +1,21 @@
 package com.chatapp.chat_app.controller;
 
-
+// dtos
 import com.chatapp.chat_app.dto.ApiResponse;
 import com.chatapp.chat_app.dto.SendMessageRequest;
 import com.chatapp.chat_app.dto.SendMessageResponse;
+
+// entities
 import com.chatapp.chat_app.model.MessageEntity;
+
+// repository
 import com.chatapp.chat_app.repository.MessageRepository;
+
+// service
 import com.chatapp.chat_app.service.MessageService;
+
 import lombok.RequiredArgsConstructor;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;

@@ -1,6 +1,7 @@
 package com.chatapp.chat_app.model;
 
 import com.chatapp.chat_app.dto.SessionStatus;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -1,14 +1,21 @@
 package com.chatapp.chat_app.service;
 
+// Dtos
 import com.chatapp.chat_app.dto.MessageRole;
 import com.chatapp.chat_app.dto.SendMessageResponse;
 import com.chatapp.chat_app.dto.SessionStatus;
-import com.chatapp.chat_app.model.*;
+
+// Repositories
 import com.chatapp.chat_app.repository.ClientRepository;
 import com.chatapp.chat_app.repository.MessageRepository;
 import com.chatapp.chat_app.repository.ServerRepository;
 import com.chatapp.chat_app.repository.SessionRepository;
+
+// Entities
+import com.chatapp.chat_app.model.*;
+
 import lombok.RequiredArgsConstructor;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -81,6 +88,7 @@ public class MessageService {
 
 
         try {
+            // try to get assigned a server through nginx ( for first message only )
             final String serverHost = assignServer(session.getId(), clientId);
 
             ServerEntity server = serverRepository.findByHost(serverHost)
@@ -102,7 +110,8 @@ public class MessageService {
         }
     }
 
-    // TODO: combine subsequent , handlefirst
+
+    // subsequent messages, directly hit server
     private SendMessageResponse handleSubsequentMessage(String clientId, String sessionId, String content)
             throws InterruptedException {
         logger.info("Subsequent message: clientId={}, sessionId={}", clientId, sessionId);
@@ -129,6 +138,7 @@ public class MessageService {
     }
 
     private SendMessageResponse forwardAndSave(SessionEntity session, String clientId, String content) {
+
         // Persist client message
         messageRepository.save(MessageEntity.builder()
                 .id(UUID.randomUUID().toString())
@@ -153,9 +163,21 @@ public class MessageService {
                 Map.class
         );
 
-        Map<String, Object> data = response != null ? (Map<String, Object>) response.get("data") : null;
-        String reply = data != null ? (String) data.get("reply") : "No response";
+        Map<String, Object> data = null;
+        if (response != null) {
+            Object dataObj = response.get("data");
+            if (dataObj instanceof Map) {
+                data = (Map<String, Object>) dataObj;
+            }
+        }
 
+        String reply = "No response";
+        if (data != null) {
+            Object replyObj = data.get("reply");
+            if (replyObj instanceof String) {
+                reply = (String) replyObj;
+            }
+        }
 
         // Persist assistant reply
         messageRepository.save(MessageEntity.builder()

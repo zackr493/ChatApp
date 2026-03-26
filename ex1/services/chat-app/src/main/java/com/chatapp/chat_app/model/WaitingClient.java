@@ -2,7 +2,6 @@ package com.chatapp.chat_app.model;
 
 import lombok.Data;
 
-import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
 
 @Data
