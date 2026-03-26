@@ -9,6 +9,7 @@ import com.chatapp.chat_app.service.SessionService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,15 +25,37 @@ public class SessionController {
 
     @PostMapping("/finish")
     public ApiResponse<String> finishSession(@RequestBody FinishRequest request) {
-        logger.info("Finish request: sessionId={}, rating={}", request.getSessionId(), request.getRating());
-        try {
-            sessionService.finishSession(request.getSessionId(), request.getRating());
-            return new ApiResponse<>(200, "Session finished", request.getSessionId());
-        } catch (Exception e) {
-            logger.error("Error finishing session: {}", request.getSessionId(), e);
-            return new ApiResponse<>(500, "Internal server error", null);
+        int maxRetries = 3;
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                // commit transaction and release connection
+                String serverHost = sessionService.finishSessionDB(
+                        request.getSessionId(), request.getRating());
+
+                // notify server
+                sessionService.notifyAndSignal(serverHost, request.getSessionId());
+
+                return new ApiResponse<>(200, "Session finished", request.getSessionId());
+            } catch (ObjectOptimisticLockingFailureException e) {
+                logger.warn("Optimistic lock on attempt {}/{}", attempt, maxRetries);
+                if (attempt == maxRetries)
+                    return new ApiResponse<>(500, "Could not finish session after retries", null);
+                try { Thread.sleep(100L * attempt); } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+            } catch (RuntimeException e) {
+                logger.warn("Finish failed: {}", e.getMessage());
+                return new ApiResponse<>(400, e.getMessage(), null);
+            } catch (Exception e) {
+                logger.error("Error finishing session: {}", request.getSessionId(), e);
+                return new ApiResponse<>(500, "Internal server error", null);
+            }
         }
+        return new ApiResponse<>(500, "Could not finish session", null);
     }
+
+
+
 
     // GET all sessions
     @GetMapping

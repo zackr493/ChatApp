@@ -28,17 +28,13 @@ public class SessionService {
     private final ServerManager serverManager;      // needed to signal the latch
     private final RestTemplate restTemplate;
 
-    // technically not possible for two threads to finish one session, but
+    // here we split finish session to two methods, so we dont open db connection during http call to chat server
     @Transactional
-    public void finishSession(String sessionId, int rating) {
-        logger.info("Finishing session: sessionId={}, rating={}", sessionId, rating);
-
+    public String finishSessionDB(String sessionId, int rating) {
         SessionEntity session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Session not found: " + sessionId));
 
         if (session.getStatus() == SessionStatus.FINISHED || session.getStatus() == SessionStatus.LOST) {
-            logger.warn("Session {} is already in terminal: {}", sessionId, session.getStatus());
-
             throw new RuntimeException("Session " + sessionId + " is already terminated");
         }
 
@@ -47,16 +43,23 @@ public class SessionService {
         session.setStatus(SessionStatus.FINISHED);
         sessionRepository.save(session);
 
-        // Update server stats now that the session is done
         ServerEntity server = session.getServerEntity();
         if (server != null) {
             completeSession(server.getId(), server.getServerName(), rating);
-            notifyChatServer(server.getHost(), sessionId);
         } else {
-            logger.warn("Session {} had no assigned server — skipping completeSession", sessionId);
+            logger.warn("Session {} had no assigned server", sessionId);
         }
 
-        logger.info("Session {} finished successfully", sessionId);
+        // return host so we can notify after transaction commits
+        return server != null ? server.getHost() : null;
+    }
+
+    // called after transaction — no connection held
+    public void notifyAndSignal(String serverHost, String sessionId) {
+        if (serverHost != null) {
+            notifyChatServer(serverHost, sessionId);
+        }
+        serverManager.signalNextClient();
     }
 
 
