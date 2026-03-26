@@ -48,6 +48,13 @@ public class ServerManager {
         return wc;
     }
 
+    // public method to release
+    public void releaseSemaphore() {
+        serverCapacitySemaphore.release();
+        logger.info("Semaphore released manually. Available permits: {}",
+                serverCapacitySemaphore.availablePermits());
+    }
+
     public void signalNextClient() {
         WaitingClient next = waitingQueue.poll();
         if (next != null) {

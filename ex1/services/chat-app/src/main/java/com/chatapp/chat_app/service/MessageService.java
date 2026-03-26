@@ -38,7 +38,7 @@ public class MessageService {
     @Value("${chat.nginx-url}")
     private String nginxUrl;
 
-    private static final int MAX_RETRIES   = 3;
+    private static final int MAX_RETRIES   = 5;
     private static final int RETRY_WAIT_MS = 1000;
 
 
@@ -78,21 +78,28 @@ public class MessageService {
             throw new RuntimeException("Request timed out after 300s");
         }
 
-        // assign server to session
-        String serverHost = assignServer(session.getId(), clientId);
 
-        // set server entity
-        ServerEntity server = serverRepository.findByHost(serverHost)
-                .orElseThrow(() -> new RuntimeException("Server not found for host: " + serverHost));
 
-        session.setServerEntity(server);
-        session.setStatus(SessionStatus.ASSIGNED);
+        try {
+            final String serverHost = assignServer(session.getId(), clientId);
 
-        sessionRepository.save(session);
+            ServerEntity server = serverRepository.findByHost(serverHost)
+                    .orElseThrow(() -> new RuntimeException("Server not found: " + serverHost));
 
-        logger.info("Session assigned server {}", session.getId(), serverHost);
+            session.setServerEntity(server);
+            session.setStatus(SessionStatus.ASSIGNED);
+            sessionRepository.save(session);
 
-        return forwardAndSave(session, clientId, content);
+            logger.info("Session {} assigned to server {}", session.getId(), serverHost);
+
+            return forwardAndSave(session, clientId, content);
+
+        } catch (Exception e) {
+            serverManager.releaseSemaphore();
+            logger.error("Failed after latch released for sessionId={}: {}",
+                    session.getId(), e.getMessage());
+            throw new RuntimeException("Failed to assign server: " + e.getMessage());
+        }
     }
 
     // TODO: combine subsequent , handlefirst
