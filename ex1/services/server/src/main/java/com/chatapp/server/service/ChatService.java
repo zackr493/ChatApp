@@ -16,7 +16,7 @@ public class ChatService {
 
         // we simulate a chat here
         try {
-            TimeUnit.SECONDS.sleep(10);
+            TimeUnit.SECONDS.sleep(5);
             return "Echo: " + content;
 
         } catch (InterruptedException e) {
