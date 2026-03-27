@@ -116,10 +116,14 @@ services:
       SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_BATCH_SIZE: 20
       SPRING_JPA_PROPERTIES_HIBERNATE_ORDER_INSERTS: true
       SPRING_JPA_PROPERTIES_HIBERNATE_ORDER_UPDATES: true
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
 
       CHAT_TOTAL_CAPACITY: 600
 
       CHAT_NGINX_URL: http://nginx:8090
+
+    volumes:
+      - ./logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
