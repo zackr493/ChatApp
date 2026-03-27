@@ -119,9 +119,8 @@ public class MessageController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(new ApiResponse<>(404, "Message not found: " + messageId, null));
             }
-
             messageRepository.deleteById(messageId);
-            logger.info("Message deleted successfully: messageId={}", messageId);
+
             return ResponseEntity.ok(new ApiResponse<>(200, "Message deleted", messageId));
         } catch (Exception e) {
             logger.error("Error deleting message: messageId={}", messageId, e);
@@ -129,6 +128,7 @@ public class MessageController {
                     .body(new ApiResponse<>(500, "Internal server error", null));
         }
     }
+
 //    // delete all messages for a session
 //    @DeleteMapping("/session/{sessionId}")
 //    public ApiResponse<String> deleteMessagesBySession(@PathVariable String sessionId) {

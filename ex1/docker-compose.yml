@@ -1,8 +1,6 @@
-version: '3.8'
+version: "3.8"
 
 services:
-
-
   postgres:
     image: postgres:15-alpine
     environment:
@@ -19,9 +17,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
-
-
 
   chat-server-1:
     build:
@@ -88,10 +83,16 @@ services:
       - chat-server-2
       - chat-server-3
 
-
   main-app:
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/actuator/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--spider",
+          "-q",
+          "http://localhost:8080/actuator/health",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -127,7 +128,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-
 
 volumes:
   postgres_data:

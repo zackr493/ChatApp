@@ -59,7 +59,6 @@ public class MessageService {
         return handleSubsequentMessage(clientId, sessionId, content);
     }
 
-    @Transactional
     private SendMessageResponse handleFirstMessage(String clientId, String content)
             // first message we save session to db
 
@@ -81,7 +80,7 @@ public class MessageService {
         WaitingClient wc = serverManager.enqueueClient(clientId, session.getId());
 
         // after 5min it becomes lost and removed, if latch not released
-        boolean ready = wc.getReadyLatch().await(20, TimeUnit.SECONDS);
+        boolean ready = wc.getReadyLatch().await(300, TimeUnit.SECONDS);
 
         if (!ready) {
             serverManager.markLost(wc);
