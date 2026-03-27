@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
@@ -58,6 +59,7 @@ public class MessageService {
         return handleSubsequentMessage(clientId, sessionId, content);
     }
 
+    @Transactional
     private SendMessageResponse handleFirstMessage(String clientId, String content)
             // first message we save session to db
 

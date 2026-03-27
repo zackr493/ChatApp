@@ -97,16 +97,19 @@ export default function ClientPage() {
     setError(null);
     setMessages((p) => [...p, { role: "USER", content }]);
     try {
-      const r = await axios.post(`${serverUrl}/messages/send`, {
+      const response = await axios.post(`${serverUrl}/messages/send`, {
         clientId,
         sessionId: sessionId ?? null,
         content,
       });
-      const { sessionId: sid, reply } = r.data.data;
+      const { sessionId: sid, reply } = response.data.data;
       if (!sessionId) setSessionId(sid);
       setMessages((p) => [...p, { role: "ASSISTANT", content: reply }]);
-    } catch {
-      setError("Failed to send");
+    } catch (e: any) {
+      console.log(e, "msg");
+
+      const msg = e?.response?.data?.message;
+      setError(msg || "Failed to send");
       setMessages((p) => p.slice(0, -1));
     } finally {
       setLoading(false);

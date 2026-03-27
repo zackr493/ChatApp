@@ -23,6 +23,8 @@ public class LostClientController {
 
     private static final Logger logger = LoggerFactory.getLogger(LostClientController.class);
 
+
+    @GetMapping
     public ResponseEntity<ApiResponse<List<LostClientEntity>>> getLostClients() {
         logger.info("Received request to fetch all lost clients");
 
