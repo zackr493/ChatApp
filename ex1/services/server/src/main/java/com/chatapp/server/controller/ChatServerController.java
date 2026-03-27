@@ -18,6 +18,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.ArrayList;
+
+
 @RestController
 @RequestMapping("/server")
 @RequiredArgsConstructor
@@ -75,5 +79,11 @@ public class ChatServerController {
         return new ApiResponse<>(200,
                 "active=" + sessionManager.getActiveSessionCount() + "/" + sessionManager.getMaxCapacity(),
                 heartbeatService.getServerHost());
+    }
+
+    @GetMapping("/active-clients")
+    public ApiResponse<List<String>> getActiveClients() {
+        return new ApiResponse<>(200, "OK",
+                new ArrayList<>(sessionManager.getActiveSessions()));
     }
 }

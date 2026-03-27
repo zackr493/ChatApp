@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Collections;
+
 
 @Service
 public class SessionManager {
@@ -48,6 +50,10 @@ public class SessionManager {
         activeSessions.remove(sessionId);
         logger.info("Session released: {}. Active: {}/{}",
                 sessionId, activeSessions.size(), serverConfig.getMaxSessions());
+    }
+
+    public Set<String> getActiveSessions() {
+        return Collections.unmodifiableSet(activeSessions);
     }
 
     public int getActiveSessionCount() {

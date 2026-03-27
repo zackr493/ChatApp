@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -83,5 +84,16 @@ public class ServerController {
         return serverOpt
                 .map(s  -> new ApiResponse<>(200, "Server found", s))
                 .orElse(new ApiResponse<>(404, "Server not found: " + serverId, null));
+    }
+
+    @GetMapping("/{serverId}/active-clients")
+    public ApiResponse<List<String>> getActiveClients(@PathVariable String serverId) {
+        try {
+            List<String> clients = serverManager.getActiveClients(serverId);
+            return new ApiResponse<>(200, "OK", clients);
+        } catch (Exception e) {
+            logger.error("Error fetching active clients for server {}", serverId, e);
+            return new ApiResponse<>(500, "Internal server error", null);
+        }
     }
 }

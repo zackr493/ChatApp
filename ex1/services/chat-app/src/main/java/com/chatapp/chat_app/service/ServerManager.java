@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 
 import java.time.LocalDateTime;
@@ -34,6 +35,7 @@ public class ServerManager {
     private final SessionRepository sessionRepository;
     private final LostClientRepository lostClientRepository;
     private final Semaphore serverCapacitySemaphore;
+    private final RestTemplate restTemplate;
 
     // thread safe , blocks caller until space is available or an item arrives
     private final LinkedBlockingQueue<WaitingClient> waitingQueue = new LinkedBlockingQueue<>();
@@ -128,6 +130,22 @@ public class ServerManager {
                 server.getId(),
                 server
         );
+    }
+
+    public List<String> getActiveClients(String serverId) {
+        ServerEntity server = serverRepository.findById(serverId)
+                .orElseThrow(() -> new RuntimeException("Server not found: " + serverId));
+
+        // fetch active session IDs from chat server in-memory state
+        Map<String, Object> response = restTemplate.getForObject(
+                server.getHost() + "/server/active-clients", Map.class);
+
+        if (response == null || response.get("data") == null) return List.of();
+
+        List<String> sessionIds = (List<String>) response.get("data");
+
+        // resolve session IDs to client names via DB
+        return sessionIds;
     }
 
 
