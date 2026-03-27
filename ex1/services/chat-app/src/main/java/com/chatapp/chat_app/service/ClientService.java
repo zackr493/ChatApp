@@ -18,15 +18,18 @@ public class ClientService {
     private final ClientRepository clientRepository;
 
     public ClientEntity createClient(String clientName) {
-
         // since we generate uuid for each clientname , we accept repeats for simplicity
         ClientEntity client = new ClientEntity(clientName);
         clientRepository.save(client);
 
-
-
         return client;
     }
+
+    public boolean clientExists(String clientName) {
+        return clientRepository.existsByClientName(clientName);
+    }
+
+
 
     public List<ClientEntity> getAllClients() {
         return clientRepository.findAll();

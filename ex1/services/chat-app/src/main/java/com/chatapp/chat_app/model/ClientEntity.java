@@ -15,6 +15,7 @@ public class ClientEntity {
     @Id
     private String id;
 
+    @Column(unique=true, nullable=false)
     private String clientName;
 
     private LocalDateTime arrivedAt;
