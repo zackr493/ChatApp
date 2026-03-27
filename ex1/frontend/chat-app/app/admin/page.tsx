@@ -79,15 +79,30 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const [serverData, sessionsData, lostClientsData] = await Promise.all([
-        axios.get(`${serverUrl}/servers`),
-        axios.get(`${serverUrl}/sessions`),
-        axios.get(`${serverUrl}/lost-clients`),
+        axios.get(`${serverUrl}/servers`).catch((err) => {
+          if (err.response?.status === 404) {
+            return { data: { data: [] } };
+          }
+          throw err;
+        }),
+        axios.get(`${serverUrl}/sessions`).catch((err) => {
+          if (err.response?.status === 404) {
+            return { data: { data: [] } };
+          }
+          throw err;
+        }),
+        axios.get(`${serverUrl}/lost-clients`).catch((err) => {
+          if (err.response?.status === 404) {
+            return { data: { data: [] } };
+          }
+          throw err;
+        }),
       ]);
 
-      const serverList: Server[] = serverData.data;
-
+      const serverList: Server[] = serverData.data.data ?? [];
       setServers(serverList);
       setSessions(sessionsData.data.data ?? []);
+
       setLost(lostClientsData.data.data ?? []);
 
       const map: Record<string, string[]> = {};
