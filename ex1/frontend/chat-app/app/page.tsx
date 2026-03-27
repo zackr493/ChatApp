@@ -82,8 +82,12 @@ export default function ClientPage() {
       });
       setClientId(r.data.data.id);
       setStage("CHATTING");
-    } catch {
-      setError("Failed to connect");
+    } catch (e: any) {
+      console.log(e);
+
+      const msg = e?.response?.data?.message;
+
+      setError(msg);
     } finally {
       setLoading(false);
     }
