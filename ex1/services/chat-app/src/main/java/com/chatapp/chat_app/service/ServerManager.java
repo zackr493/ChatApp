@@ -168,8 +168,10 @@ public class ServerManager {
 
         LostClientEntity lost = LostClientEntity.builder()
                 .clientId(client.getClientId())
+                .sessionId(client.getSessionId())
                 .createdAt(LocalDateTime.now())
                 .build();
+
         lostClientRepository.save(lost);
 
 

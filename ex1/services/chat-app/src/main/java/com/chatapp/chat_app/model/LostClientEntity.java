@@ -25,6 +25,8 @@ public class LostClientEntity {
 
     private String clientId;
 
+    private String sessionId;
+
     private LocalDateTime createdAt;
 
 }
