@@ -6,6 +6,7 @@ import com.chatapp.chat_app.dto.SendMessageResponse;
 import com.chatapp.chat_app.dto.SessionStatus;
 
 // Repositories
+import com.chatapp.chat_app.exception.ClientTimedOutException;
 import com.chatapp.chat_app.repository.ClientRepository;
 import com.chatapp.chat_app.repository.MessageRepository;
 import com.chatapp.chat_app.repository.ServerRepository;
@@ -78,11 +79,11 @@ public class MessageService {
         WaitingClient wc = serverManager.enqueueClient(clientId, session.getId());
 
         // after 5min it becomes lost and removed, if latch not released
-        boolean ready = wc.getReadyLatch().await(300, TimeUnit.SECONDS);
+        boolean ready = wc.getReadyLatch().await(20, TimeUnit.SECONDS);
 
         if (!ready) {
             serverManager.markLost(wc);
-            throw new RuntimeException("Request timed out after 300s");
+            throw new ClientTimedOutException("No server available. Please try again later.");
         }
 
 
