@@ -6,6 +6,7 @@ import com.chatapp.chat_app.dto.SendMessageRequest;
 import com.chatapp.chat_app.dto.SendMessageResponse;
 
 // entities
+import com.chatapp.chat_app.exception.ClientTimedOutException;
 import com.chatapp.chat_app.model.MessageEntity;
 
 // repository
@@ -18,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,16 +37,16 @@ public class MessageController {
     private final MessageRepository messageRepository;
 
     @PostMapping("/send")
-    public ApiResponse<SendMessageResponse> sendMessage(@RequestBody SendMessageRequest request) {
+    public ResponseEntity<ApiResponse<?>> sendMessage(@RequestBody SendMessageRequest request) {
         logger.info("Message request received: clientId={}, sessionId={}",
                 request.getClientId(), request.getSessionId());
 
         if (request.getClientId() == null || request.getClientId().isBlank()) {
-            return new ApiResponse<>(400, "Client ID cannot be empty", null);
+            return ResponseEntity.badRequest().body(new ApiResponse<>(400, "Client ID cannot be empty", null));
         }
 
         if (request.getContent() == null || request.getContent().isBlank()) {
-            return new ApiResponse<>(400, "Message content cannot be empty", null);
+            return ResponseEntity.badRequest().body(new ApiResponse<>(400, "Message content cannot be empty", null));
         }
 
         try {
@@ -52,49 +55,56 @@ public class MessageController {
                     request.getSessionId(),
                     request.getContent()
             );
-            return new ApiResponse<>(200, "Message sent", response);
+            return ResponseEntity.ok(new ApiResponse<>(200, "Message sent", response));
+
+        } catch (ClientTimedOutException e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(new ApiResponse<>(503, e.getMessage(), null));
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             logger.error("Request interrupted for clientId={}", request.getClientId());
-            return new ApiResponse<>(500, "Request interrupted", null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(500, "Request interrupted", null));
 
         } catch (RuntimeException e) {
             logger.warn("Send message failed: {}", e.getMessage());
-            return new ApiResponse<>(400, e.getMessage(), null);
+            return ResponseEntity.badRequest().body(new ApiResponse<>(400, e.getMessage(), null));
 
         } catch (Exception e) {
             logger.error("Unexpected error for clientId={}", request.getClientId(), e);
-            return new ApiResponse<>(500, "Internal server error", null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(500, "Internal server error", null));
         }
     }
 
     // to load messages from db
     @GetMapping("/session/{sessionId}")
-    public ApiResponse<List<MessageEntity>> getMessagesBySession(@PathVariable String sessionId) {
+    public ResponseEntity<ApiResponse<?>> getMessagesBySession(@PathVariable String sessionId) {
         logger.info("Getting messages for sessionId={}", sessionId);
         try {
             List<MessageEntity> messages = messageRepository.findBySessionIdOrderBySentAtAsc(sessionId);
-            return new ApiResponse<>(200, "Messages fetched", messages);
+            return ResponseEntity.ok(new ApiResponse<>(200, "Messages fetched", messages));
         } catch (Exception e) {
             logger.error("Error getting messages for sessionId={}", sessionId, e);
-            return new ApiResponse<>(500, "Internal server error", null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(500, "Internal server error", null));
         }
     }
 
     // get single message by ID
     @GetMapping("/{messageId}")
-    public ApiResponse<MessageEntity> getMessageById(@PathVariable String messageId) {
+    public ResponseEntity<ApiResponse<?>> getMessageById(@PathVariable String messageId) {
         logger.info("Fetching message: messageId={}", messageId);
 
         Optional<MessageEntity> message = messageRepository.findById(messageId);
 
         if (message.isPresent()) {
-            return new ApiResponse<MessageEntity>(200, "Message found", message.get());
+            return ResponseEntity.ok(new ApiResponse<>(200, "Message found", message.get()));
         }
 
-        return new ApiResponse<>(404, "Message not found" , null) ;
-
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiResponse<>(404, "Message not found", null));
 
     }
 
@@ -102,20 +112,23 @@ public class MessageController {
 
     // delete message by id
     @DeleteMapping("/{messageId}")
-    public ApiResponse<String> deleteMessage(@PathVariable String messageId) {
+    public ResponseEntity<ApiResponse<?>> deleteMessage(@PathVariable String messageId) {
         logger.info("Deleting message: messageId={}", messageId);
         try {
             if (!messageRepository.existsById(messageId)) {
-                return new ApiResponse<>(404, "Message not found: " + messageId, null);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ApiResponse<>(404, "Message not found: " + messageId, null));
             }
+
             messageRepository.deleteById(messageId);
-            return new ApiResponse<>(200, "Message deleted", messageId);
+            logger.info("Message deleted successfully: messageId={}", messageId);
+            return ResponseEntity.ok(new ApiResponse<>(200, "Message deleted", messageId));
         } catch (Exception e) {
             logger.error("Error deleting message: messageId={}", messageId, e);
-            return new ApiResponse<>(500, "Internal server error", null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(500, "Internal server error", null));
         }
     }
-
 //    // delete all messages for a session
 //    @DeleteMapping("/session/{sessionId}")
 //    public ApiResponse<String> deleteMessagesBySession(@PathVariable String sessionId) {

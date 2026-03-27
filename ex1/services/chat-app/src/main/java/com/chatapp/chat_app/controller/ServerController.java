@@ -24,6 +24,9 @@ import com.chatapp.chat_app.dto.RegisterServerResponse;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -45,14 +48,26 @@ public class ServerController {
 
     // server calls this on startup
     @PostMapping("/register")
-    public ApiResponse<RegisterServerResponse> registerServer(@RequestBody RegisterServerRequest request) {
+    public ResponseEntity<ApiResponse<RegisterServerResponse>> registerServer(@RequestBody RegisterServerRequest request) {
         logger.info("Server registration: name={}, host={}", request.getServerName(), request.getHost());
+
         try {
             RegisterServerResponse server = serverManager.registerServer(request.getServerName(), request.getHost());
-            return new ApiResponse<RegisterServerResponse>(200, "Server registered", server);
+            logger.info("Server registered successfully: name={}, host={}", request.getServerName(), request.getHost());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(new ApiResponse<>(200, "Server registered", server));
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid server registration request: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ApiResponse<>(400, "Invalid server name or host", null));
+        } catch (DataAccessException e) {
+            logger.error("Database error while registering server: name={}, host={}", request.getServerName(), request.getHost(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(500, "Database error", null));
         } catch (Exception e) {
-            logger.error("Error registering server", e);
-            return new ApiResponse<>(500, "Internal server error", null);
+            logger.error("Error registering server: name={}, host={}", request.getServerName(), request.getHost(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(500, "Internal server error", null));
         }
     }
 
@@ -74,26 +89,53 @@ public class ServerController {
 
 
     @GetMapping
-    public List<ServerEntity> getAllServers() {
-        return serverManager.getAllServers();
+    public ResponseEntity<ApiResponse<List<ServerEntity>>> getAllServers() {
+        logger.info("Received request to fetch all servers");
+
+        try {
+            List<ServerEntity> servers = serverManager.getAllServers();
+            logger.info("Fetched {} servers successfully", servers.size());
+            return ResponseEntity.ok(new ApiResponse<>(200, "Servers fetched successfully", servers));
+        } catch (Exception e) {
+            logger.error("Error occurred while fetching servers", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(500, "Internal server error", null));
+        }
     }
 
     @GetMapping("/{serverId}")
-    public ApiResponse<ServerEntity> getServerById(@PathVariable String serverId) {
-        Optional<ServerEntity> serverOpt = serverManager.getServerById(serverId);
-        return serverOpt
-                .map(s  -> new ApiResponse<>(200, "Server found", s))
-                .orElse(new ApiResponse<>(404, "Server not found: " + serverId, null));
+    public ResponseEntity<ApiResponse<ServerEntity>> getServerById(@PathVariable String serverId) {
+        logger.info("Received request to fetch server by ID: {}", serverId);
+
+        try {
+            Optional<ServerEntity> serverOpt = serverManager.getServerById(serverId);
+            return serverOpt
+                    .map(s -> ResponseEntity.ok(new ApiResponse<>(200, "Server found", s)))
+                    .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                            .body(new ApiResponse<>(404, "Server not found: " + serverId, null)));
+        } catch (Exception e) {
+            logger.error("Error occurred while fetching server by ID: {}", serverId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(500, "Internal server error", null));
+        }
     }
 
     @GetMapping("/{serverId}/active-clients")
-    public ApiResponse<List<String>> getActiveClients(@PathVariable String serverId) {
+    public ResponseEntity<ApiResponse<List<String>>> getActiveClients(@PathVariable String serverId) {
+        logger.info("Received request to fetch active clients for server: {}", serverId);
+
         try {
             List<String> clients = serverManager.getActiveClients(serverId);
-            return new ApiResponse<>(200, "OK", clients);
+            logger.info("Fetched {} active clients for server: {}", clients.size(), serverId);
+            return ResponseEntity.ok(new ApiResponse<>(200, "Active clients fetched successfully", clients));
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid server ID: {}", serverId);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ApiResponse<>(400, "Invalid server ID", null));
         } catch (Exception e) {
-            logger.error("Error fetching active clients for server {}", serverId, e);
-            return new ApiResponse<>(500, "Internal server error", null);
+            logger.error("Error fetching active clients for server: {}", serverId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>(500, "Internal server error", null));
         }
     }
 }
