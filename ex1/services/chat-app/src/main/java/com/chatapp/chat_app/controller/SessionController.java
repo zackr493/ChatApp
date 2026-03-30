@@ -51,7 +51,9 @@ public class SessionController {
                 if (attempt == maxRetries)
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                             .body(new ApiResponse<>(500, "Could not finish session after retries", null));
-                try { Thread.sleep(100L * attempt); } catch (InterruptedException ie) {
+                try {
+                    Thread.sleep(100L * attempt);
+                } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                 }
             } catch (RuntimeException e) {

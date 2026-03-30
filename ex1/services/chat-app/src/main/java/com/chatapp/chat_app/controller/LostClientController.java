@@ -1,8 +1,14 @@
 package com.chatapp.chat_app.controller;
 
+// Dtos
 import com.chatapp.chat_app.dto.ApiResponse;
+
+// Models
 import com.chatapp.chat_app.model.LostClientEntity;
+
+// Repositories
 import com.chatapp.chat_app.repository.LostClientRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-
 @RestController
 @RequestMapping("/lost-clients")
 @RequiredArgsConstructor
@@ -22,7 +27,6 @@ public class LostClientController {
     private final LostClientRepository lostClientRepository;
 
     private static final Logger logger = LoggerFactory.getLogger(LostClientController.class);
-
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<LostClientEntity>>> getLostClients() {

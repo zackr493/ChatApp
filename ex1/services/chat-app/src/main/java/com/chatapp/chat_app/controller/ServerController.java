@@ -1,10 +1,7 @@
 package com.chatapp.chat_app.controller;
 
-
 // Entities
 import com.chatapp.chat_app.model.ServerEntity;
-
-
 
 // Repository
 import com.chatapp.chat_app.repository.ClientRepository;
@@ -30,7 +27,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -40,15 +36,16 @@ public class ServerController {
 
     private static final Logger logger = LoggerFactory.getLogger(ServerController.class);
 
-    private final ClientRepository  clientRepository;
+    private final ClientRepository clientRepository;
     private final SessionRepository sessionRepository;
-    private final ServerManager     serverManager;
-    private final SessionService    sessionService;
+    private final ServerManager serverManager;
+    private final SessionService sessionService;
     private final MessageService messageService;
 
     // server calls this on startup
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<RegisterServerResponse>> registerServer(@RequestBody RegisterServerRequest request) {
+    public ResponseEntity<ApiResponse<RegisterServerResponse>> registerServer(
+            @RequestBody RegisterServerRequest request) {
         logger.info("Server registration: name={}, host={}", request.getServerName(), request.getHost());
 
         try {
@@ -61,7 +58,8 @@ public class ServerController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ApiResponse<>(400, "Invalid server name or host", null));
         } catch (DataAccessException e) {
-            logger.error("Database error while registering server: name={}, host={}", request.getServerName(), request.getHost(), e);
+            logger.error("Database error while registering server: name={}, host={}", request.getServerName(),
+                    request.getHost(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(500, "Database error", null));
         } catch (Exception e) {
@@ -71,21 +69,6 @@ public class ServerController {
         }
     }
 
-//    // server calls this on interval, to record health in db
-//    @PostMapping("/heartbeat")
-//    public ApiResponse<String> heartbeat(@RequestBody HeartbeatRequest request) {
-//        logger.debug("Heartbeat received: serverhost={}", request.getServerHost());
-//        try {
-//            serverManager.recordHeartbeat(request.getServerHost());
-//            return new ApiResponse<>(200, "OK", request.getServerHost());
-//        } catch (Exception e) {
-//            logger.warn("Heartbeat failed for serverHost={}: {}", request.getServerHost(), e.getMessage());
-//            return new ApiResponse<>(404, "Server not found", null);
-//        }
-//    }
-
-
-    //
 
 
     @GetMapping

@@ -21,7 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
@@ -36,18 +35,18 @@ public class MessageService {
 
     private static final Logger logger = LoggerFactory.getLogger(MessageService.class);
 
-    private final ClientRepository  clientRepository;
+    private final ClientRepository clientRepository;
     private final SessionRepository sessionRepository;
     private final MessageRepository messageRepository;
     private final ServerRepository serverRepository;
 
-    private final ServerManager     serverManager;
-    private final RestTemplate      restTemplate;
+    private final ServerManager serverManager;
+    private final RestTemplate restTemplate;
 
     @Value("${chat.nginx-url}")
     private String nginxUrl;
 
-    private static final int MAX_RETRIES   = 5;
+    private static final int MAX_RETRIES = 5;
     private static final int RETRY_WAIT_MS = 1000;
 
 
@@ -60,7 +59,7 @@ public class MessageService {
     }
 
     private SendMessageResponse handleFirstMessage(String clientId, String content)
-            // first message we save session to db
+        // first message we save session to db
 
             throws InterruptedException {
         logger.info("First message from clientId={}", clientId);
@@ -86,7 +85,6 @@ public class MessageService {
             serverManager.markLost(wc);
             throw new ClientTimedOutException("No server available. Please try again later.");
         }
-
 
 
         try {
@@ -135,7 +133,6 @@ public class MessageService {
         }
 
 
-
         return forwardAndSave(session, clientId, content);
     }
 
@@ -159,8 +156,8 @@ public class MessageService {
                 serverUrl,
                 Map.of(
                         "sessionId", session.getId(),
-                        "clientId",  clientId,
-                        "content",   content
+                        "clientId", clientId,
+                        "content", content
                 ),
                 Map.class
         );
@@ -194,6 +191,7 @@ public class MessageService {
         logger.info("Message saved for sessionId={}", session.getId());
         return new SendMessageResponse(session.getId(), reply);
     }
+
     private String assignServer(String sessionId, String clientId) {
         // sends a request to server container , to "book" a thread , only first request needs to go through this
         for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {

@@ -1,12 +1,18 @@
+
 package com.chatapp.chat_app.controller;
 
+
+// Dtos
 import com.chatapp.chat_app.dto.ApiResponse;
-import com.chatapp.chat_app.model.ClientEntity;
 import com.chatapp.chat_app.dto.ClientRequest;
+
+// Models
+import com.chatapp.chat_app.model.ClientEntity;
+
+// Services
 import com.chatapp.chat_app.service.ClientService;
 
 import lombok.RequiredArgsConstructor;
-import org.apache.coyote.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -30,14 +36,18 @@ public class ClientController {
         logger.info("Received request to client: {}", request.getClientName());
 
         if (request.getClientName() == null || request.getClientName().isBlank()) {
+
             logger.warn("Client creation failed: Client Name is empty");
+
             return ResponseEntity.badRequest()
                     .body(new ApiResponse<>(400, "Client Name cannot be empty", null));
         }
 
         try {
             logger.debug("Checking if client exists with name: {}", request.getClientName());
+
             boolean exists = clientService.clientExists(request.getClientName());
+
             logger.info("Client existence check result: {} - exists: {}", request.getClientName(), exists);
 
             if (exists) {
@@ -47,16 +57,19 @@ public class ClientController {
             }
 
             ClientEntity client = clientService.createClient(request.getClientName());
+
             logger.info("Client created successfully: id={}, name={}", client.getId(), client.getClientName());
+
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(new ApiResponse<>(200, "Client created successfully", client));
+
         } catch (Exception e) {
+
             logger.error("Error occurred while creating client: {}", request.getClientName(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(500, "Internal server error", null));
         }
     }
-
 
     // READ all
     @GetMapping
@@ -65,10 +78,14 @@ public class ClientController {
 
         try {
             List<ClientEntity> clients = clientService.getAllClients();
+
             logger.info("Fetched {} clients successfully", clients.size());
+
             return ResponseEntity.ok(new ApiResponse<>(200, "Clients fetched successfully", clients));
+
         } catch (Exception e) {
             logger.error("Error occurred while fetching clients", e);
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(500, "Internal server error", null));
         }
@@ -95,8 +112,5 @@ public class ClientController {
                     .body(new ApiResponse<>(500, "Internal server error", null));
         }
     }
-
-
-
 
 }
